@@ -1,0 +1,22 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-5);
+  padding: var(--space-8) var(--gutter);
+  text-align: center;
+}
+
+.logo {
+  width: 160px;
+}
+
+.page h1 {
+  font-size: var(--fs-h2);
+}
+
+.page p {
+  color: var(--color-muted);
+  max-width: 44ch;
+}

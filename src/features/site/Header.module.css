@@ -1,0 +1,125 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: rgba(255, 248, 241, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bar {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  flex: none;
+  border-radius: var(--radius-sm);
+}
+
+.logo {
+  width: 92px;
+  height: auto;
+}
+
+.desktopNav {
+  display: none;
+}
+
+.desktopNav ul {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.desktopNav a {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-text-soft);
+  text-decoration: none;
+  padding: var(--space-2) 0;
+}
+
+.desktopNav a:hover {
+  color: var(--color-brand-deep);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.mobileNav {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-cream);
+}
+
+.mobileNav ul {
+  list-style: none;
+  margin-block: 0;
+  padding-block: var(--space-2) var(--space-4);
+  padding-inline: 0;
+  display: grid;
+}
+
+.mobileNav a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  font-weight: 800;
+  font-size: var(--fs-lg);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mobileNav .mobileCta {
+  margin-top: var(--space-3);
+  justify-content: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-cta);
+  color: #fff;
+}
+
+@media (max-width: 379px) {
+  .cta {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .logo {
+    width: 116px;
+  }
+}
+
+@media (min-width: 960px) {
+  .desktopNav {
+    display: block;
+  }
+
+  .toggle,
+  .mobileNav {
+    display: none;
+  }
+}

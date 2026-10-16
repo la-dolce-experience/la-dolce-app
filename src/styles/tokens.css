@@ -1,0 +1,107 @@
+/*
+ * Tokens de design — derivados do site original da La Dolce Experience.
+ * Cores institucionais preservadas; tons de texto/botão ajustados para contraste AA.
+ */
+:root {
+  /* Marca */
+  --color-brand: #e22b63; /* rosa do logotipo (decorativo / fundos grandes) */
+  --color-brand-strong: #d4245a; /* rosa para fundos com texto branco (contraste 5:1) */
+  --color-brand-deep: #b40f3f; /* vinho-rosado: kickers, links, gradiente */
+  --color-ink: #210513; /* vinho quase preto do logotipo */
+  --color-gold: #f3c26f;
+
+  /* Neutros */
+  --color-text: var(--color-ink);
+  --color-text-soft: #4d3440;
+  --color-muted: #66525b;
+  --color-cream: #fff6ed;
+  --color-cream-soft: #fffaf7;
+  --color-surface: #ffffff;
+  --color-border: rgba(33, 5, 19, 0.1);
+  --color-border-strong: rgba(33, 5, 19, 0.22);
+
+  /* Estados */
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-success: #067647;
+  --color-success-bg: #ecfdf3;
+  --color-info-bg: #fff1f5;
+  /* Verde WhatsApp escurecido: texto branco (padrão da marca) com contraste 4,65:1 (WCAG AA). */
+  --color-whatsapp: #158640;
+  --color-whatsapp-text: #ffffff;
+
+  /* Gradientes da marca */
+  --gradient-cta: linear-gradient(135deg, var(--color-brand-strong), var(--color-brand-deep));
+  --gradient-band: linear-gradient(135deg, var(--color-brand-strong) 0%, #c31550 55%, var(--color-ink) 100%);
+  --gradient-page: linear-gradient(180deg, #fff8f1 0%, #fff 45%, #fff7fb 100%);
+
+  /* Tipografia */
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-xs: 0.8125rem; /* 13 */
+  --fs-sm: 0.9375rem; /* 15 */
+  --fs-md: 1rem;
+  --fs-lg: 1.125rem; /* 18 */
+  --fs-lead: clamp(1.0625rem, 0.95rem + 0.6vw, 1.375rem);
+  --fs-h3: clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem);
+  --fs-h2: clamp(2rem, 1.4rem + 2.6vw, 3.5rem);
+  --fs-h1: clamp(2.5rem, 1.7rem + 3.6vw, 4.5rem);
+  --lh-tight: 1.02;
+  --lh-snug: 1.2;
+  --lh-body: 1.65;
+  --tracking-tight: -0.04em;
+  --tracking-kicker: 0.14em;
+
+  /* Espaçamento (escala de 4px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --section-y: clamp(3.5rem, 2.5rem + 4vw, 5.5rem);
+  --gutter: 1rem;
+  --container: 1160px;
+
+  /* Bordas */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-pill: 999px;
+
+  /* Sombras */
+  --shadow-sm: 0 6px 20px rgba(33, 5, 19, 0.08);
+  --shadow-md: 0 15px 50px rgba(33, 5, 19, 0.1);
+  --shadow-lg: 0 25px 80px rgba(33, 5, 19, 0.18);
+  --shadow-btn: 0 12px 30px rgba(180, 15, 63, 0.25);
+
+  /* Foco e controles */
+  --focus-ring: 0 0 0 3px #fff, 0 0 0 6px var(--color-brand-deep);
+  --control-h: 3rem; /* 48px: alvo de toque confortável */
+  --header-h: 72px;
+
+  /* Movimento */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 180ms;
+
+  --z-header: 30;
+  --z-float: 40;
+  --z-overlay: 50;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: 1.5rem;
+    --header-h: 82px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0ms;
+  }
+}

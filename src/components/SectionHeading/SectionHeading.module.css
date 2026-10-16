@@ -1,0 +1,39 @@
+.heading {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.center {
+  max-width: 780px;
+  margin-inline: auto;
+  text-align: center;
+  justify-items: center;
+}
+
+.eyebrow {
+  color: var(--color-brand-deep);
+  font-size: var(--fs-xs);
+  font-weight: 900;
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: var(--fs-h2);
+}
+
+.body {
+  color: var(--color-muted);
+  font-size: var(--fs-lg);
+  line-height: var(--lh-body);
+  max-width: 62ch;
+}
+
+.inverse .eyebrow,
+.inverse .title {
+  color: #fff;
+}
+
+.inverse .body {
+  color: rgba(255, 255, 255, 0.88);
+}

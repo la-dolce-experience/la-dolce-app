@@ -1,0 +1,90 @@
+.footer {
+  background: var(--color-ink);
+  color: rgba(255, 255, 255, 0.86);
+  padding-block: var(--space-12) var(--space-6);
+  /* espaço para o botão flutuante do WhatsApp não cobrir o conteúdo final */
+  padding-bottom: calc(var(--space-6) + 72px);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.brand {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+.brand img {
+  width: 132px;
+}
+
+.heading {
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: 900;
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.footer ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer :focus-visible {
+  box-shadow:
+    0 0 0 3px var(--color-ink),
+    0 0 0 6px #fff;
+}
+
+.socials {
+  display: flex !important;
+  gap: var(--space-2) !important;
+  margin-top: var(--space-3) !important;
+}
+
+.socials a {
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bottom {
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: 1.4fr 1fr 1.2fr;
+  }
+
+  .footer {
+    padding-bottom: var(--space-6);
+  }
+}

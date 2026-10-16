@@ -1,0 +1,4 @@
+/* Enquanto o conteúdo do banco carrega (máx. 4 s), evita mostrar textos que podem mudar. */
+.loading {
+  visibility: hidden;
+}

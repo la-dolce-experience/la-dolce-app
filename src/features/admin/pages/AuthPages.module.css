@@ -1,0 +1,97 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--gutter);
+  background: var(--gradient-page);
+}
+
+.card {
+  width: min(440px, 100%);
+  display: grid;
+  gap: var(--space-6);
+  justify-items: center;
+  padding: clamp(1.5rem, 1rem + 2vw, 2.5rem);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.logo {
+  width: 140px;
+}
+
+.form {
+  width: 100%;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form h1 {
+  font-size: 1.625rem;
+  letter-spacing: -0.03em;
+  text-align: center;
+}
+
+.lead {
+  color: var(--color-muted);
+  text-align: center;
+  font-size: var(--fs-sm);
+}
+
+.error {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+}
+
+.success {
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: var(--fs-sm);
+}
+
+.passwordRow {
+  position: relative;
+}
+
+.passwordRow input {
+  padding-right: 52px;
+}
+
+.reveal {
+  position: absolute;
+  right: 4px;
+  bottom: 1px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-soft);
+}
+
+.link {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-brand-deep);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.back {
+  font-size: var(--fs-sm);
+  color: var(--color-muted);
+}
