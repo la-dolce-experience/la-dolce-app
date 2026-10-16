@@ -50,6 +50,7 @@ export function Footer() {
             <li>
               <a
                 href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
+                data-wa-origem="rodape"
                 target="_blank"
                 rel="noopener noreferrer"
               >

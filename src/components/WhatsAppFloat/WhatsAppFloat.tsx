@@ -25,6 +25,7 @@ export function WhatsAppFloat({ number, greeting, hideWhenVisibleId }: Props) {
   return (
     <a
       href={buildWhatsAppUrl(number, greeting)}
+      data-wa-origem="botao_flutuante"
       target="_blank"
       rel="noopener noreferrer"
       className={`${styles.float} ${hidden ? styles.hidden : ''}`}

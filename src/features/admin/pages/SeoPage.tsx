@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 import a from '../admin.module.css';
 import { TextAreaField, TextField } from '../components/Fields';
 import { ImagePicker } from '../components/ImagePicker';
+import { RepublishPanel } from '../components/RepublishPanel';
 import { SettingsEditor } from '../components/SettingsEditor';
 import { PageHeader } from './PageHeader';
 import styles from './SeoPage.module.css';
@@ -70,15 +71,15 @@ export function SeoPage() {
               <div className={a.notice}>
                 <Info aria-hidden="true" />
                 <p>
-                  WhatsApp, Facebook e LinkedIn leem a versão publicada do site e guardam a prévia em cache. Alterações
-                  aqui atualizam a página na hora, mas a prévia de links já compartilhados pode levar alguns dias para
-                  mudar e só reflete o novo título, descrição e imagem após a próxima publicação do site.
+                  Depois de salvar, use <strong>Atualizar a prévia do link</strong>, logo abaixo, para o WhatsApp e as
+                  redes sociais mostrarem o novo título, descrição e imagem.
                 </p>
               </div>
             </section>
           </>
         )}
       </SettingsEditor>
+      <RepublishPanel />
     </>
   );
 }

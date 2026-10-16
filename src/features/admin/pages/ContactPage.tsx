@@ -16,6 +16,7 @@ export function ContactPage() {
       />
       <SettingsEditor
         formKey="settings:contact"
+        previewAnchor=""
         fields={[
           'business_name',
           'footer_tagline',

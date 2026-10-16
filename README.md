@@ -4,6 +4,7 @@ Site institucional da **La Dolce Experience** (sorveteria premium itinerante par
 
 - **Site público** (`/`): página única e responsiva, com botão flutuante e formulário de orçamento que abrem o WhatsApp com a mensagem pronta.
 - **Painel** (`/admin`): login, edição de todas as seções, galeria de imagens, contatos, endereço e SEO.
+- **No painel também:** resultados do site (visitas e cliques no WhatsApp), pré-visualização antes de publicar, lixeira com restauração por 30 dias, cópia de segurança em JSON, botão para atualizar a prévia do link, envio de fotos do iPhone (HEIC), tour guiado e menu Ajuda.
 
 > **Pendências em aberto:** `la-dolce-docs/pendencias-cliente.md`.
 
@@ -58,6 +59,8 @@ O app funciona sozinho para desenvolver o site público, usando o conteúdo padr
 | [Playwright](https://playwright.dev) + [axe-core](https://github.com/dequelabs/axe-core) | Testes E2E no build de produção e verificação de acessibilidade |
 | [ESLint](https://eslint.org) + [Prettier](https://prettier.io) | Lint e formatação |
 | [sharp](https://sharp.pixelplumbing.com) | Geração das imagens otimizadas (WebP em dois tamanhos) |
+| [heic-to](https://github.com/hoppergee/heic-to) (LGPL-3.0) | Conversão de fotos HEIC do iPhone no navegador, carregada só quando necessário |
+| [Sentry](https://sentry.io) (opcional) | Monitoramento de erros do site e do painel, ativado por `VITE_SENTRY_DSN` |
 | [Gitleaks](https://github.com/gitleaks/gitleaks) + `scripts/check-secrets.mjs` | Busca de segredos no histórico do Git e no build público |
 | GitHub Actions + Dependabot | Integração contínua e atualização de dependências |
 
@@ -76,7 +79,7 @@ src/
     quote/                Formulário de orçamento → WhatsApp
     admin/                Painel: autenticação, páginas, editores, tour guiado e Ajuda
   hooks/                  Contexto de conteúdo e metatags
-  lib/                    Configuração do Supabase
+  lib/                    Supabase, métricas anônimas, pré-visualização e monitoramento de erros
   pages/                  Página inicial e 404
   services/               Leitura pública (REST), operações do painel, mensagens de erro
   styles/                 Tokens de design e estilos globais
@@ -108,7 +111,11 @@ Pré-requisitos: **Node.js 20+** (o projeto usa 24, veja `.nvmrc`). Para o paine
    npm run dev      # http://localhost:5173 e http://localhost:5173/admin
    ```
 
-Opcionalmente, defina `VITE_SUPPORT_NAME`, `VITE_SUPPORT_WHATSAPP` e `VITE_SUPPORT_EMAIL` para o menu **Ajuda** do painel mostrar o contato do suporte técnico.
+Opcionais:
+- `VITE_SUPPORT_NAME`, `VITE_SUPPORT_WHATSAPP` e `VITE_SUPPORT_EMAIL`: contato do suporte técnico no menu **Ajuda** do painel.
+- `VITE_SENTRY_DSN`: envia os erros do site publicado ao Sentry. Em desenvolvimento nada é enviado.
+
+As métricas de visitas e cliques só são gravadas no build de produção; em `npm run dev` nada é contado.
 
 Sem as variáveis do Supabase, o site público funciona com o conteúdo padrão (`src/content/defaultContent.ts`), e o painel mostra instruções de configuração.
 

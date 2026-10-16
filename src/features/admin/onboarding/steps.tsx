@@ -30,14 +30,20 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     route: '/admin',
-    target: '[data-tour="checklist"]',
-    title: 'Visão geral',
+    target: '[data-tour="metrics"]',
+    title: 'Resultados do site',
     body: (
       <p>
-        Esta é a primeira tela depois de entrar. A lista mostra as informações que ainda faltam no site, com um atalho
-        para preencher cada uma.
+        Quantas pessoas visitaram o site e quantas clicaram para falar no WhatsApp, por dia e por botão. Use os períodos
+        de 7, 30 ou 90 dias.
       </p>
     ),
+  },
+  {
+    route: '/admin',
+    target: '[data-tour="checklist"]',
+    title: 'O que falta preencher',
+    body: <p>A lista mostra as informações que ainda faltam no site, com um atalho para preencher cada uma.</p>,
   },
   {
     route: '/admin',
@@ -70,11 +76,14 @@ export const TOUR_STEPS: TourStep[] = [
   {
     route: '/admin/secoes/hero',
     target: '[data-tour="save-bar"]',
-    title: 'Salvar alterações',
+    title: 'Pré-visualizar e salvar',
     body: (
       <ul>
         <li>
           Depois de mudar algo, esta barra mostra <strong>Alterações não salvas</strong>.
+        </li>
+        <li>
+          <strong>Pré-visualizar</strong> abre o site com as mudanças, antes de publicar. Só você vê.
         </li>
         <li>
           <strong>Salvar alterações</strong> publica na hora; <strong>Descartar</strong> volta ao que estava salvo.
@@ -116,7 +125,7 @@ export const TOUR_STEPS: TourStep[] = [
           Desmarcar <strong>Exibir no site</strong> esconde o item sem apagá-lo.
         </li>
         <li>
-          <strong>Excluir</strong> pede confirmação e não pode ser desfeito.
+          <strong>Excluir</strong> manda o item para a <strong>Lixeira</strong>, de onde ele pode voltar por 30 dias.
         </li>
       </ul>
     ),
@@ -127,8 +136,8 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Biblioteca de imagens',
     body: (
       <p>
-        Envie fotos aqui (JPG, PNG ou WebP de até 10 MB). O painel reduz e otimiza cada uma, e todas ficam disponíveis
-        para usar em qualquer seção.
+        Envie fotos aqui, inclusive direto do iPhone (JPG, PNG, WebP ou HEIC de até 10 MB). O painel reduz e otimiza
+        cada uma, e todas ficam disponíveis para usar em qualquer seção.
       </p>
     ),
   },
@@ -149,8 +158,19 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Google e compartilhamento',
     body: (
       <p>
-        O título e a descrição que aparecem no Google. Logo abaixo, a imagem mostrada quando alguém envia o link do site
-        pelo WhatsApp ou pelas redes sociais.
+        O título e a descrição que aparecem no Google e a imagem mostrada quando alguém envia o link do site. Depois de
+        mudar, use <strong>Atualizar prévia do link</strong>, no fim da página.
+      </p>
+    ),
+  },
+  {
+    route: '/admin/lixeira',
+    target: '[data-tour="trash"]',
+    title: 'Lixeira e cópia de segurança',
+    body: (
+      <p>
+        Excluiu algo por engano? Restaure aqui por até 30 dias. Nesta tela você também baixa uma{' '}
+        <strong>cópia de todo o conteúdo</strong> do site.
       </p>
     ),
   },

@@ -1,0 +1,48 @@
+.banner {
+  /* No rodapé, à esquerda do botão do WhatsApp: o cabeçalho do site já ocupa o topo. */
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  right: calc(56px + 32px);
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: var(--z-float);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 560px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-gold);
+  color: var(--color-ink);
+  font-size: var(--fs-sm);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.banner > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.banner p {
+  flex: 1;
+}
+
+.banner button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.banner button:hover {
+  background: rgba(33, 5, 19, 0.1);
+}
+
+.banner button svg {
+  width: 18px;
+  height: 18px;
+}

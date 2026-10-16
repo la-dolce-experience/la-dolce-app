@@ -16,6 +16,7 @@ import { MediaPage } from './pages/MediaPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SectionPage } from './pages/SectionPage';
 import { SeoPage } from './pages/SeoPage';
+import { TrashPage } from './pages/TrashPage';
 import authStyles from './pages/AuthPages.module.css';
 
 function useNoIndex() {
@@ -99,6 +100,7 @@ export default function AdminApp() {
             <Route path="contato" element={<ContactPage />} />
             <Route path="seo" element={<SeoPage />} />
             <Route path="imagens" element={<MediaPage />} />
+            <Route path="lixeira" element={<TrashPage />} />
             <Route path="conta" element={<AccountPage />} />
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Route>

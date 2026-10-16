@@ -79,6 +79,7 @@ export function PersonalizationSection() {
             <ButtonLink
               variant="light"
               href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
+              data-wa-origem="personalizacao"
               target="_blank"
               rel="noopener noreferrer"
               icon={<WhatsAppIcon />}

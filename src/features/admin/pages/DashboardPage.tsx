@@ -4,6 +4,7 @@ import { ButtonLink } from '../../../components/Button/Button';
 import { getSettings, listItems, listSections } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
 import a from '../admin.module.css';
+import { MetricsPanel } from '../components/MetricsPanel';
 import { useLoad } from '../hooks';
 import { SECTION_CONFIG } from '../sectionConfig';
 import { PageHeader } from './PageHeader';
@@ -70,6 +71,8 @@ export function DashboardPage() {
           </button>
         </div>
       )}
+
+      <MetricsPanel />
 
       {data && (
         <>

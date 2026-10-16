@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultContent } from '../content/defaultContent';
-import { fetchSiteContent } from '../services/contentService';
+import { isPreviewMode, PREVIEW_STORAGE_KEY } from '../lib/preview';
+import { fetchPreviewContent, fetchSiteContent } from '../services/contentService';
 import type { SiteContent } from '../types/content';
 
 export type ContentStatus = 'loading' | 'ready' | 'fallback';
@@ -21,8 +22,19 @@ interface ProviderProps {
   loader?: () => Promise<SiteContent | null>;
 }
 
-export function SiteContentProvider({ children, loader = fetchSiteContent }: ProviderProps) {
+const defaultLoader = () => (isPreviewMode() ? fetchPreviewContent() : fetchSiteContent());
+
+export function SiteContentProvider({ children, loader = defaultLoader }: ProviderProps) {
   const [state, setState] = useState<ContextValue>({ content: defaultContent, status: 'loading' });
+  // Na pré-visualização, cada mudança no rascunho (outra aba, o painel) recarrega o conteúdo.
+  const [draftVersion, setDraftVersion] = useState(0);
+
+  useEffect(() => {
+    if (!isPreviewMode()) return;
+    const onStorage = (e: StorageEvent) => e.key === PREVIEW_STORAGE_KEY && setDraftVersion((v) => v + 1);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -42,7 +54,7 @@ export function SiteContentProvider({ children, loader = fetchSiteContent }: Pro
     return () => {
       active = false;
     };
-  }, [loader]);
+  }, [loader, draftVersion]);
 
   return <SiteContentContext.Provider value={state}>{children}</SiteContentContext.Provider>;
 }

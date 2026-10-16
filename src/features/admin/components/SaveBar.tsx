@@ -1,3 +1,4 @@
+import { Eye } from 'lucide-react';
 import { Button } from '../../../components/Button/Button';
 import a from '../admin.module.css';
 
@@ -8,16 +9,23 @@ interface Props {
   onDiscard: () => void;
   /** Fixa a barra no rodapé da tela enquanto rola (padrão). */
   sticky?: boolean;
+  /** Abre o site com as alterações ainda não salvas. */
+  onPreview?: () => void;
 }
 
 /** Barra fixa com o estado das alterações e o botão de salvar explícito. */
-export function SaveBar({ dirty, saving, onSave, onDiscard, sticky = true }: Props) {
+export function SaveBar({ dirty, saving, onSave, onDiscard, sticky = true, onPreview }: Props) {
   return (
     <div className={`${a.saveBar} ${sticky ? '' : a.saveBarInline}`} data-tour="save-bar">
       <span className={dirty ? a.dirty : a.clean} role="status">
         {dirty ? 'Alterações não salvas' : 'Tudo salvo'}
       </span>
       <div className={a.saveBarActions}>
+        {dirty && onPreview && (
+          <Button variant="ghost" size="sm" icon={<Eye aria-hidden="true" />} onClick={onPreview} disabled={saving}>
+            Pré-visualizar
+          </Button>
+        )}
         {dirty && (
           <Button variant="outline" size="sm" onClick={onDiscard} disabled={saving}>
             Descartar

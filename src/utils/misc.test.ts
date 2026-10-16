@@ -32,10 +32,15 @@ describe('localização', () => {
 
 describe('imagens', () => {
   it('valida tipo e tamanho', () => {
-    expect(validateImageFile({ type: 'image/gif', size: 100 })).toMatch(/Formato/);
-    expect(validateImageFile({ type: 'image/jpeg', size: 11 * 1024 * 1024 })).toMatch(/10 MB/);
-    expect(validateImageFile({ type: 'image/png', size: 0 })).toMatch(/vazio/);
-    expect(validateImageFile({ type: 'image/webp', size: 2048 })).toBeNull();
+    expect(validateImageFile({ name: 'a.gif', type: 'image/gif', size: 100 })).toMatch(/Formato/);
+    expect(validateImageFile({ name: 'a.jpg', type: 'image/jpeg', size: 11 * 1024 * 1024 })).toMatch(/10 MB/);
+    expect(validateImageFile({ name: 'a.png', type: 'image/png', size: 0 })).toMatch(/vazio/);
+    expect(validateImageFile({ name: 'a.webp', type: 'image/webp', size: 2048 })).toBeNull();
+    // Fotos do iPhone: pelo tipo ou, quando o navegador não informa o tipo, pela extensão.
+    expect(validateImageFile({ name: 'IMG_0001.HEIC', type: 'image/heic', size: 2048 })).toBeNull();
+    expect(validateImageFile({ name: 'IMG_0002.heic', type: '', size: 2048 })).toBeNull();
+    expect(validateImageFile({ name: 'foto.heif', type: '', size: 2048 })).toBeNull();
+    expect(validateImageFile({ name: 'arquivo', type: '', size: 2048 })).toMatch(/Formato/);
   });
 
   it('redimensiona sem ampliar e mantendo a proporção', () => {

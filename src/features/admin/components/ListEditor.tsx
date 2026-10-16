@@ -322,7 +322,12 @@ function ItemCard({
     }
     const ok = await confirm({
       title: `Excluir ${itemName}?`,
-      message: <p>“{heading}” será removido(a) do site. Esta ação não pode ser desfeita.</p>,
+      message: (
+        <p>
+          “{heading}” será removido(a) do site. Se mudar de ideia, você pode restaurá-lo(a) em{' '}
+          <strong>Lixeira e backup</strong> por 30 dias.
+        </p>
+      ),
       confirmLabel: 'Excluir',
       danger: true,
     });

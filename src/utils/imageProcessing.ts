@@ -1,6 +1,9 @@
 import type { ProcessedImage } from '../services/adminService';
+import { HEIC_EXTENSIONS, HEIC_MIME_TYPES, looksLikeHeic } from './heic';
 
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+/** Valor do atributo `accept` do campo de arquivo: inclui HEIC, convertido para JPEG antes do envio. */
+export const ACCEPT_ATTRIBUTE = [...ACCEPTED_IMAGE_TYPES, ...HEIC_MIME_TYPES, ...HEIC_EXTENSIONS].join(',');
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB (antes da otimização)
 export const MIN_IMAGE_SIDE = 400;
 const LARGE_SIDE = 1600;
@@ -10,9 +13,9 @@ const SMALL_SIDE = 800;
 export class ImageProcessingError extends Error {}
 
 /** Validação feita antes de decodificar o arquivo. Retorna mensagem de erro ou null. */
-export function validateImageFile(file: Pick<File, 'type' | 'size'>): string | null {
-  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return 'Formato não aceito. Envie uma foto JPG, PNG ou WebP.';
+export function validateImageFile(file: Pick<File, 'type' | 'size' | 'name'>): string | null {
+  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type) && !looksLikeHeic(file)) {
+    return 'Formato não aceito. Envie uma foto JPG, PNG, WebP ou HEIC (iPhone).';
   }
   if (file.size > MAX_IMAGE_BYTES) {
     return `A imagem tem ${(file.size / 1024 / 1024).toFixed(1)} MB. O limite é 10 MB.`;

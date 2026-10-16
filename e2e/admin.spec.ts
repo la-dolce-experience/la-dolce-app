@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const EMAIL = process.env.E2E_ADMIN_EMAIL;
@@ -119,7 +120,7 @@ test.describe('Tour guiado e ajuda', () => {
     const dialog = page.getByRole('dialog');
     const next = page.getByRole('button', { name: 'Próximo' });
     await expect(dialog).toHaveAccessibleName('Boas-vindas ao painel');
-    await expect(dialog).toContainText('Passo 1 de 13');
+    await expect(dialog).toContainText('Passo 1 de 15');
     // Durante o tour, o restante do painel fica bloqueado para teclado e mouse.
     await expect(page.locator('#admin-main')).toHaveAttribute('inert', '');
     await expect(page.locator('#admin-sidebar')).toHaveAttribute('inert', '');
@@ -127,7 +128,11 @@ test.describe('Tour guiado e ajuda', () => {
     expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
 
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Visão geral');
+    await expect(dialog).toHaveAccessibleName('Resultados do site');
+    await expectSpotlightOn(page, '[data-tour="metrics"]');
+
+    await next.click();
+    await expect(dialog).toHaveAccessibleName('O que falta preencher');
     await expectSpotlightOn(page, '[data-tour="checklist"]');
 
     await next.click();
@@ -140,7 +145,7 @@ test.describe('Tour guiado e ajuda', () => {
     await expectSpotlightOn(page, '[data-tour="image-picker"]');
 
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Salvar alterações');
+    await expect(dialog).toHaveAccessibleName('Pré-visualizar e salvar');
     await expectSpotlightOn(page, '[data-tour="save-bar"]');
 
     await next.click();
@@ -164,6 +169,7 @@ test.describe('Tour guiado e ajuda', () => {
       ['/admin/imagens', 'Biblioteca de imagens', '[data-tour="media-upload"]'],
       ['/admin/contato', 'WhatsApp e contatos', '[data-tour="whatsapp"]'],
       ['/admin/seo', 'Google e compartilhamento', '[data-tour="seo"]'],
+      ['/admin/lixeira', 'Lixeira e cópia de segurança', '[data-tour="trash"]'],
       ['/admin/conta', 'Sua conta', '[data-tour="password"]'],
       ['/admin', 'Precisa de ajuda?', '[data-tour="help"]'],
     ]) {
@@ -173,7 +179,7 @@ test.describe('Tour guiado e ajuda', () => {
       await expectSpotlightOn(page, selector);
     }
 
-    await expect(dialog).toContainText('Passo 13 de 13');
+    await expect(dialog).toContainText('Passo 15 de 15');
     const saved = waitForGuideSaved(page);
     await page.getByRole('button', { name: 'Concluir' }).click();
     await saved;
@@ -209,13 +215,14 @@ test.describe('Tour guiado e ajuda', () => {
     await expect(dialog).toHaveAccessibleName('Boas-vindas ao painel');
     await next.click();
     await next.click();
+    await next.click();
     await expect(dialog).toHaveAccessibleName('Página inicial, seção por seção');
     await expectSpotlightOn(page, '[data-tour="menu-button"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
 
     await next.click();
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Salvar alterações');
+    await expect(dialog).toHaveAccessibleName('Pré-visualizar e salvar');
     await expectSpotlightOn(page, '[data-tour="save-bar"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
     await page.keyboard.press('Escape');
@@ -402,6 +409,209 @@ test.describe('Imagens', () => {
     await expect(dialog).toContainText('Galeria');
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(used).toBeVisible();
+  });
+});
+
+test.describe('Fotos do iPhone (HEIC)', () => {
+  test.beforeEach(async ({ page }) => login(page));
+
+  test('foto HEIC é convertida no navegador, otimizada e enviada', async ({ page, context }) => {
+    await page.goto('/admin/imagens');
+    // No Windows o navegador entrega o HEIC sem tipo: a extensão basta.
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'IMG_0001.HEIC',
+      mimeType: '',
+      buffer: readFileSync(path.resolve('e2e/fixtures/foto-iphone.heic')),
+    });
+    await expect(page.getByText('Pré-visualização:')).toBeVisible({ timeout: 30_000 });
+    await page.getByLabel(/Descrição da imagem/).fill('Foto HEIC de teste e2e');
+    await page.getByRole('button', { name: 'Enviar imagem' }).click();
+    await expect(page.getByText('Imagem enviada.')).toBeVisible();
+
+    const card = page.locator('li', { has: page.locator('input[value="Foto HEIC de teste e2e"]') });
+    await expect(card).toContainText('667×1000px');
+    const thumb = await card.locator('img').getAttribute('src');
+    expect((await context.request.get(thumb!)).headers()['content-type']).toBe('image/webp');
+
+    await card.getByRole('button', { name: 'Excluir' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir imagem' }).click();
+    await expect(card).toHaveCount(0);
+  });
+});
+
+test.describe('Resultados do site', () => {
+  test('conta a visita e o clique no WhatsApp de um visitante', async ({ page, browser }) => {
+    await login(page);
+    await page.getByRole('button', { name: '7 dias' }).click();
+    const value = (label: string) =>
+      page
+        .locator('dt', { hasText: label })
+        .locator('xpath=following-sibling::dd')
+        .innerText()
+        .then((t) => Number(t.replace(/\D/g, '')));
+    const visitsBefore = await value('Visitas');
+    const clicksBefore = await value('Cliques no WhatsApp');
+
+    // Visitante em outro navegador (sem sessão do painel).
+    const visitor = await browser.newContext();
+    await visitor.route('https://wa.me/**', (route) => route.fulfill({ body: 'ok' }));
+    const site = await visitor.newPage();
+    const visit = site.waitForResponse((r) => r.url().endsWith('/rpc/track_event'));
+    await site.goto('/');
+    await visit;
+    const click = site.waitForResponse((r) => r.url().endsWith('/rpc/track_event'));
+    await site.getByRole('link', { name: /Conversar pelo WhatsApp/ }).click();
+    await click;
+    await visitor.close();
+
+    await expect
+      .poll(async () => {
+        await page.reload();
+        await page.getByRole('button', { name: '7 dias' }).click();
+        return [await value('Visitas'), await value('Cliques no WhatsApp')];
+      })
+      .toEqual([visitsBefore + 1, clicksBefore + 1]);
+    await expect(page.locator('[data-tour="metrics"]')).toContainText('Botão flutuante');
+  });
+});
+
+test.describe('Lixeira e cópia de segurança', () => {
+  test.beforeEach(async ({ page }) => login(page));
+
+  test('item excluído pode ser restaurado da lixeira', async ({ page }) => {
+    const question = `Lixeira e2e ${Date.now()}`;
+    await page.goto('/admin/secoes/faq');
+    await page.getByRole('button', { name: 'Adicionar pergunta' }).first().click();
+    await page.locator('input[id$="-question"]').last().fill(question);
+    await page.locator('textarea[id$="-answer"]').last().fill('Resposta de teste.');
+    await page.getByRole('button', { name: 'Salvar pergunta' }).click();
+    await expect(page.getByText('Pergunta adicionado(a).')).toBeVisible();
+
+    const card = page.locator('li', { has: page.locator(`input[value="${question}"]`) });
+    await card.getByRole('button', { name: 'Excluir' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('Lixeira e backup');
+    await dialog.getByRole('button', { name: 'Excluir' }).click();
+    await expect(card).toHaveCount(0);
+
+    await page.goto('/admin/lixeira');
+    const trashed = page.locator('li', { hasText: question });
+    await expect(trashed).toContainText('Pergunta frequente');
+    await trashed.getByRole('button', { name: `Restaurar “${question}”` }).click();
+    await expect(page.getByText(`“${question}” foi restaurado em Perguntas frequentes.`)).toBeVisible();
+    await expect(trashed).toHaveCount(0);
+
+    await page.goto('/admin/secoes/faq');
+    await expect(card).toBeVisible();
+
+    // Limpeza: exclui de novo e apaga da lixeira de vez.
+    await card.getByRole('button', { name: 'Excluir' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir' }).click();
+    await expect(card).toHaveCount(0);
+    await page.goto('/admin/lixeira');
+    await page.getByRole('button', { name: `Excluir definitivamente “${question}”` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+    await expect(page.locator('li', { hasText: question })).toHaveCount(0);
+  });
+
+  test('baixa uma cópia de todo o conteúdo em JSON', async ({ page }) => {
+    await page.goto('/admin/lixeira');
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Baixar cópia do conteúdo' }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/^la-dolce-conteudo-\d{4}-\d{2}-\d{2}\.json$/);
+    const backup = JSON.parse(readFileSync((await file.path())!, 'utf8'));
+    expect(backup.formato).toBe('la-dolce-backup');
+    expect(backup.dados.sections).toHaveLength(11);
+    expect(backup.dados.site_settings[0].whatsapp_number).toMatch(/^55\d+$/);
+    expect(Object.keys(backup.dados)).toEqual(
+      expect.arrayContaining(['event_types', 'features', 'gallery_items', 'faqs', 'testimonials', 'media']),
+    );
+  });
+});
+
+test.describe('Pré-visualização', () => {
+  test.beforeEach(async ({ page }) => login(page));
+
+  test('mostra alterações não salvas no site, ao vivo, sem publicar', async ({ page, browser }) => {
+    await page.goto('/admin/secoes/hero');
+    const title = page.locator('#section-title');
+    const original = await title.inputValue();
+
+    await title.fill('Prévia e2e: primeira versão');
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByRole('button', { name: 'Pré-visualizar' }).click();
+    const preview = await popupPromise;
+    await expect(preview).toHaveURL(/\?previa=1/);
+    await expect(preview.getByRole('status').filter({ hasText: 'Pré-visualização.' })).toBeVisible();
+    await expect(preview.getByRole('heading', { level: 1 })).toHaveText('Prévia e2e: primeira versão');
+
+    // Ao vivo: a aba da prévia acompanha o que é digitado no painel.
+    await title.fill('Prévia e2e: segunda versão');
+    await expect(preview.getByRole('heading', { level: 1 })).toHaveText('Prévia e2e: segunda versão');
+
+    // Ninguém mais vê: o site publicado continua igual.
+    const visitor = await browser.newPage();
+    await visitor.goto('/');
+    await expect(visitor.getByRole('heading', { level: 1 })).toHaveText(original);
+    await visitor.close();
+
+    // Descartar volta a prévia ao conteúdo publicado.
+    await page.getByRole('button', { name: 'Descartar' }).click();
+    await expect(preview.getByRole('heading', { level: 1 })).toHaveText(original);
+    await expect(title).toHaveValue(original);
+  });
+});
+
+test.describe('Atualizar prévia do link', () => {
+  test.beforeEach(async ({ page }) => login(page));
+
+  async function mockFunction(page: Page, status: number, body: Record<string, unknown>) {
+    await page.unroute('**/functions/v1/republicar-site');
+    await page.route('**/functions/v1/republicar-site', (route) =>
+      route.fulfill({
+        status: route.request().method() === 'OPTIONS' ? 204 : status,
+        headers: {
+          'access-control-allow-origin': '*',
+          'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+          'content-type': 'application/json',
+        },
+        body: route.request().method() === 'OPTIONS' ? '' : JSON.stringify(body),
+      }),
+    );
+  }
+
+  test('explica cada resposta da republicação', async ({ page }) => {
+    await page.goto('/admin/seo');
+    const button = page.getByRole('button', { name: 'Atualizar prévia do link' });
+
+    await mockFunction(page, 503, { error: 'nao_configurado' });
+    await button.click();
+    await expect(page.getByText('A atualização automática ainda não foi configurada.', { exact: false })).toBeVisible();
+
+    await mockFunction(page, 429, { error: 'aguarde', retry_after_seconds: 240 });
+    await button.click();
+    await expect(page.getByText('Aguarde 4 minutos', { exact: false })).toBeVisible();
+
+    await mockFunction(page, 202, { ok: true });
+    await button.click();
+    await expect(page.getByText('Atualização iniciada.', { exact: false })).toBeVisible();
+
+    // Com alterações não salvas, o botão fica indisponível e explica o motivo.
+    await page.locator('#settings-seo_title').fill('Título alterado e2e');
+    await expect(button).toBeDisabled();
+    await expect(page.getByText('Salve as alterações desta página antes de atualizar a prévia.')).toBeVisible();
+    await page.getByRole('button', { name: 'Descartar' }).click();
+  });
+});
+
+test.describe('Tela de erro', () => {
+  test('arquivo de uma versão antiga do site: explica e oferece recarregar', async ({ page }) => {
+    await page.route('**/assets/AdminApp-*.js', (route) => route.abort());
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('O site foi atualizado');
+    await expect(page.getByRole('button', { name: 'Recarregar a página' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voltar à Visão geral' })).toHaveAttribute('href', '/admin');
   });
 });
 

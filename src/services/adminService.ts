@@ -219,3 +219,120 @@ export async function markOnboardingCompleted(): Promise<void> {
   });
   if (error) throw error;
 }
+
+// ---------------- Métricas ----------------
+
+export interface EventSummaryRow {
+  day: string;
+  kind: 'visit' | 'whatsapp_click';
+  source: string | null;
+  total: number;
+}
+
+/** Visitas e cliques no WhatsApp por dia e origem (horário de Brasília). */
+export async function getEventsSummary(days = 30): Promise<EventSummaryRow[]> {
+  const { data, error } = await requireSupabase().rpc('events_summary', { p_days: days });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ ...r, kind: r.kind as EventSummaryRow['kind'], total: Number(r.total) }));
+}
+
+// ---------------- Lixeira ----------------
+
+export type TrashRow = Tables<'trash'>;
+
+export async function listTrash(): Promise<TrashRow[]> {
+  return check(await requireSupabase().from('trash').select('*').order('deleted_at', { ascending: false }));
+}
+
+export async function restoreFromTrash(id: string): Promise<void> {
+  const { error } = await requireSupabase().rpc('restore_from_trash', { p_id: id });
+  if (error) throw error;
+}
+
+export async function deleteFromTrash(id: string): Promise<void> {
+  const { error } = await requireSupabase().from('trash').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---------------- Cópia de segurança ----------------
+
+export interface ContentBackup {
+  formato: 'la-dolce-backup';
+  versao: 1;
+  geradoEm: string;
+  observacao: string;
+  dados: Record<string, unknown>;
+}
+
+/** Todo o conteúdo editável (inclusive itens ocultos), em JSON. Os arquivos de imagem continuam no Storage. */
+export async function exportContent(): Promise<ContentBackup> {
+  const sb = requireSupabase();
+  const [settings, sections, eventTypes, features, steps, gallery, faqs, testimonials, media] = await Promise.all([
+    sb.from('site_settings').select('*'),
+    sb.from('sections').select('*').order('key'),
+    sb.from('event_types').select('*').order('position'),
+    sb.from('features').select('*').order('position'),
+    sb.from('steps').select('*').order('position'),
+    sb.from('gallery_items').select('*').order('position'),
+    sb.from('faqs').select('*').order('position'),
+    sb.from('testimonials').select('*').order('position'),
+    sb.from('media').select('*').order('created_at'),
+  ]);
+  return {
+    formato: 'la-dolce-backup',
+    versao: 1,
+    geradoEm: new Date().toISOString(),
+    observacao:
+      'Cópia dos textos, contatos, listas e referências das imagens. Os arquivos de imagem ficam no Storage do Supabase (bucket "media").',
+    dados: {
+      site_settings: check(settings),
+      sections: check(sections),
+      event_types: check(eventTypes),
+      features: check(features),
+      steps: check(steps),
+      gallery_items: check(gallery),
+      faqs: check(faqs),
+      testimonials: check(testimonials),
+      media: check(media),
+    },
+  };
+}
+
+// ---------------- Republicação do site ----------------
+
+export type RepublishResult =
+  | { status: 'ok' }
+  | { status: 'not_configured' }
+  | { status: 'wait'; retryAfterSeconds: number }
+  | { status: 'failed'; detail?: string };
+
+/** Pede à Edge Function "republicar-site" um novo deploy na Vercel (atualiza a prévia do link). */
+export async function requestRepublish(): Promise<RepublishResult> {
+  const { error } = await requireSupabase().functions.invoke('republicar-site', { method: 'POST' });
+  if (!error) return { status: 'ok' };
+  const response = (error as { context?: Response }).context;
+  if (!(response instanceof Response)) throw error;
+  const body = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    retry_after_seconds?: number;
+    detail?: string;
+  };
+  if (response.status === 503) return { status: 'not_configured' };
+  if (response.status === 429) return { status: 'wait', retryAfterSeconds: body.retry_after_seconds ?? 300 };
+  if (response.status === 401 || response.status === 403)
+    throw Object.assign(new Error('permission denied'), { code: '42501' });
+  return { status: 'failed', detail: body.detail };
+}
+
+export type DeployRequestRow = Tables<'deploy_requests'>;
+
+export async function getLastDeployRequest(): Promise<DeployRequestRow | null> {
+  const { data, error } = await requireSupabase()
+    .from('deploy_requests')
+    .select('*')
+    .order('requested_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

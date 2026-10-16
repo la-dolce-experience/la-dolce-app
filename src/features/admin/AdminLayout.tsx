@@ -1,4 +1,16 @@
-import { ExternalLink, House, Images, KeyRound, LayoutDashboard, LogOut, Menu, Phone, Search, X } from 'lucide-react';
+import {
+  ArchiveRestore,
+  ExternalLink,
+  House,
+  Images,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Phone,
+  Search,
+  X,
+} from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { markOnboardingCompleted } from '../../services/adminService';
@@ -99,6 +111,7 @@ export function AdminLayout() {
             {link('/admin/contato', 'Contato e marca', <Phone aria-hidden="true" />)}
             {link('/admin/seo', 'Google e compartilhamento', <Search aria-hidden="true" />)}
             {link('/admin/imagens', 'Biblioteca de imagens', <Images aria-hidden="true" />)}
+            {link('/admin/lixeira', 'Lixeira e backup', <ArchiveRestore aria-hidden="true" />)}
             {link('/admin/conta', 'Minha conta', <KeyRound aria-hidden="true" />)}
           </ul>
         </nav>

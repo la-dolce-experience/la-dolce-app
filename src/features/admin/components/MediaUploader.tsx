@@ -3,8 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../../components/Button/Button';
 import { uploadMedia, type MediaRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
+import { convertHeicToJpeg, looksLikeHeic } from '../../../utils/heic';
 import {
-  ACCEPTED_IMAGE_TYPES,
+  ACCEPT_ATTRIBUTE,
   ImageProcessingError,
   processImageFile,
   validateImageFile,
@@ -28,6 +29,7 @@ export function MediaUploader({ onUploaded }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [altError, setAltError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   useEffect(
     () => () => {
@@ -36,16 +38,30 @@ export function MediaUploader({ onUploaded }: Props) {
     [preview],
   );
 
-  function choose(next: File | undefined) {
+  function reject(message: string) {
+    setError(message);
+    setFile(null);
+    setPreview(null);
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  async function choose(next: File | undefined) {
     setError(null);
     if (!next) return;
     const invalid = validateImageFile(next);
-    if (invalid) {
-      setError(invalid);
-      setFile(null);
-      setPreview(null);
-      if (inputRef.current) inputRef.current.value = '';
-      return;
+    if (invalid) return reject(invalid);
+    if (looksLikeHeic(next)) {
+      // Foto do iPhone: converte para JPEG antes, para a pré-visualização funcionar em qualquer navegador.
+      setConverting(true);
+      try {
+        next = await convertHeicToJpeg(next);
+      } catch {
+        return reject(
+          'Não foi possível converter esta foto do iPhone. Tente outra foto ou, no iPhone, ative Ajustes › Câmera › Formatos › Mais compatível.',
+        );
+      } finally {
+        setConverting(false);
+      }
     }
     setFile(next);
     setPreview(URL.createObjectURL(next));
@@ -92,15 +108,21 @@ export function MediaUploader({ onUploaded }: Props) {
           ref={inputRef}
           id={`${id}-file`}
           type="file"
-          accept={ACCEPTED_IMAGE_TYPES.join(',')}
+          accept={ACCEPT_ATTRIBUTE}
           className="visually-hidden"
           onChange={(e) => choose(e.target.files?.[0])}
           aria-describedby={`${id}-rules`}
         />
         <p id={`${id}-rules`} className={styles.rules}>
-          JPG, PNG ou WebP, até 10 MB. A imagem é otimizada automaticamente antes do envio.
+          JPG, PNG, WebP ou HEIC (iPhone), até 10 MB. A imagem é otimizada automaticamente antes do envio.
         </p>
       </div>
+
+      {converting && (
+        <p className={styles.rules} role="status">
+          Convertendo a foto do iPhone…
+        </p>
+      )}
 
       {error && (
         <p className={styles.error} role="alert">

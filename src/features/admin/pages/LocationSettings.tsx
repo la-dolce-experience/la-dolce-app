@@ -8,6 +8,7 @@ export function LocationSettings() {
   return (
     <SettingsEditor
       formKey="settings:location"
+      previewAnchor="atendimento"
       fields={[
         'service_area',
         'opening_hours',

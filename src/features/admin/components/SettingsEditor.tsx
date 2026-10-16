@@ -1,6 +1,7 @@
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '../../../components/Button/Button';
+import { clearPreviewDraft, openPreview, updatePreviewDraft, type SettingsDraft } from '../../../lib/preview';
 import { getSettings, listMedia, updateSettings, type MediaRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
 import a from '../admin.module.css';
@@ -30,10 +31,12 @@ interface Props {
   /** Campos que esta tela edita (somente eles são validados e enviados). */
   fields: (keyof SettingsForm)[];
   children: (api: SettingsRenderApi) => ReactNode;
+  /** Seção do site aberta na pré-visualização ('' = topo). Sem valor, não há pré-visualização. */
+  previewAnchor?: string;
 }
 
 /** Carrega, valida e salva um subconjunto das configurações comerciais. */
-export function SettingsEditor({ formKey, fields, children }: Props) {
+export function SettingsEditor({ formKey, fields, children, previewAnchor }: Props) {
   const { notify } = useFeedback();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -41,7 +44,38 @@ export function SettingsEditor({ formKey, fields, children }: Props) {
   const [errors, setErrors] = useState<SettingsErrors>({});
   const [media, setMedia] = useState<Map<string, MediaRow>>(new Map());
   const form = useFormState<SettingsForm>();
+  const [previewing, setPreviewing] = useState(false);
   useTrackDirty(formKey, form.dirty);
+
+  const draft = (): SettingsDraft | null => {
+    if (!form.values) return null;
+    const normalized = normalizeSettings(form.values);
+    const d: SettingsDraft = Object.fromEntries(fields.map((f) => [f, normalized[f]]));
+    if (fields.includes('logo_media_id'))
+      d.logo = normalized.logo_media_id ? (media.get(normalized.logo_media_id) ?? null) : null;
+    if (fields.includes('og_media_id'))
+      d.og = normalized.og_media_id ? (media.get(normalized.og_media_id) ?? null) : null;
+    return d;
+  };
+
+  useEffect(() => {
+    const d = draft();
+    if (!previewing || !d) return;
+    const timer = setTimeout(() => updatePreviewDraft({ settings: d }), 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewing, form.values, media]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => clearPreviewDraft({ settingsFields: fields }), []);
+
+  function preview() {
+    const d = draft();
+    if (!d) return;
+    updatePreviewDraft({ settings: d });
+    setPreviewing(true);
+    openPreview(previewAnchor);
+  }
 
   const [attempt, setAttempt] = useState(0);
 
@@ -78,6 +112,7 @@ export function SettingsEditor({ formKey, fields, children }: Props) {
       const patch = Object.fromEntries(fields.map((f) => [f, normalized[f]]));
       const row = await updateSettings(patch);
       form.reset(rowToForm(row));
+      clearPreviewDraft({ settingsFields: fields });
       notify('success', 'Alterações salvas. Elas já aparecem no site.');
     } catch (e) {
       notify('error', toFriendlyError(e));
@@ -140,7 +175,9 @@ export function SettingsEditor({ formKey, fields, children }: Props) {
         onDiscard={() => {
           form.discard();
           setErrors({});
+          clearPreviewDraft({ settingsFields: fields });
         }}
+        onPreview={previewAnchor === undefined ? undefined : preview}
       />
     </form>
   );

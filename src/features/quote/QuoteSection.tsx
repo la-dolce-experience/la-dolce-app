@@ -6,6 +6,7 @@ import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { maskPhoneInput } from '../../utils/phone';
 import { openExternal } from '../../utils/browser';
+import { trackEvent } from '../../lib/metrics';
 import { buildQuoteMessage, buildWhatsAppUrl } from '../../utils/whatsapp';
 import { useQuoteIntent } from './QuoteIntentContext';
 import {
@@ -112,6 +113,7 @@ export function QuoteSection() {
     setSentUrl(url);
     setCoolingDown(true);
     openExternal(url);
+    trackEvent('whatsapp_click', 'formulario');
     requestAnimationFrame(() => statusRef.current?.focus());
   }
 

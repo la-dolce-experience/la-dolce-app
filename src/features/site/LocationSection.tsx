@@ -64,6 +64,7 @@ export function LocationSection() {
               <dd>
                 <a
                   href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
+                  data-wa-origem="atendimento"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -97,6 +98,7 @@ export function LocationSection() {
             <ButtonLink
               variant="whatsapp"
               href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
+              data-wa-origem="atendimento"
               target="_blank"
               rel="noopener noreferrer"
               icon={<WhatsAppIcon />}

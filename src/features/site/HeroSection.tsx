@@ -26,6 +26,7 @@ export function HeroSection() {
             </ButtonLink>
             <ButtonLink
               href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
+              data-wa-origem="destaque"
               target="_blank"
               rel="noopener noreferrer"
               variant="outline"

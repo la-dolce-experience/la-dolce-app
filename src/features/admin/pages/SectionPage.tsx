@@ -2,6 +2,7 @@ import { Info, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/Button/Button';
+import { clearPreviewDraft, openPreview, updatePreviewDraft, type SectionDraft } from '../../../lib/preview';
 import { getSection, listMedia, updateSection, type MediaRow, type SectionRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
 import { SECTION_KEYS, type SectionKey } from '../../../types/content';
@@ -60,7 +61,34 @@ function SectionEditor({ config }: { config: SectionConfig }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [titleError, setTitleError] = useState<string>();
+  const [previewing, setPreviewing] = useState(false);
   useTrackDirty(`section:${config.key}`, form.dirty);
+
+  const draft = (): SectionDraft | null =>
+    form.values && {
+      ...form.values,
+      media: form.values.image_media_id ? (media.get(form.values.image_media_id) ?? null) : null,
+    };
+
+  // Com a pré-visualização aberta, cada alteração aparece nela (com uma pequena pausa enquanto digita).
+  useEffect(() => {
+    const d = draft();
+    if (!previewing || !d) return;
+    const timer = setTimeout(() => updatePreviewDraft({ section: [config.key, d] }), 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewing, form.values, media]);
+
+  // Ao sair da tela, o rascunho desta seção deixa de valer.
+  useEffect(() => () => clearPreviewDraft({ section: config.key }), [config.key]);
+
+  function preview() {
+    const d = draft();
+    if (!d) return;
+    updatePreviewDraft({ section: [config.key, d] });
+    setPreviewing(true);
+    openPreview(config.anchor);
+  }
 
   const [attempt, setAttempt] = useState(0);
 
@@ -95,6 +123,7 @@ function SectionEditor({ config }: { config: SectionConfig }) {
       ) as unknown as SectionForm;
       const row = await updateSection(config.key, trimmed);
       form.reset(toForm(row));
+      clearPreviewDraft({ section: config.key });
       notify('success', 'Seção salva. As alterações já aparecem no site.');
     } catch (e) {
       notify('error', toFriendlyError(e));
@@ -221,7 +250,9 @@ function SectionEditor({ config }: { config: SectionConfig }) {
             onDiscard={() => {
               form.discard();
               setTitleError(undefined);
+              clearPreviewDraft({ section: config.key });
             }}
+            onPreview={preview}
           />
         </form>
       )}

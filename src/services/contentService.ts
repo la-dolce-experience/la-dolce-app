@@ -1,5 +1,6 @@
 import { defaultContent } from '../content/defaultContent';
 import { isSupabaseConfigured, MEDIA_BUCKET, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/env';
+import { readPreviewDraft, type PreviewDraft } from '../lib/preview';
 import type { Tables } from '../types/database';
 import {
   SECTION_KEYS,
@@ -138,9 +139,8 @@ async function rest<T>(table: string, query: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-/** Busca todo o conteúdo público em paralelo. Retorna null se o Supabase não estiver configurado. */
-export async function fetchSiteContent(): Promise<SiteContent | null> {
-  if (!isSupabaseConfigured) return null;
+/** Busca as linhas de todo o conteúdo público em paralelo. */
+export async function fetchContentRows(): Promise<ContentRows> {
   const ordered = 'select=*&order=position.asc';
 
   const [settings, sections, eventTypes, features, steps, gallery, faqs, testimonials] = await Promise.all([
@@ -157,14 +157,40 @@ export async function fetchSiteContent(): Promise<SiteContent | null> {
     rest<Tables<'testimonials'>[]>('testimonials', ordered),
   ]);
 
-  return mapContent({
-    settings: settings[0] ?? null,
-    sections,
-    eventTypes,
-    features,
-    steps,
-    gallery,
-    faqs,
-    testimonials,
+  return { settings: settings[0] ?? null, sections, eventTypes, features, steps, gallery, faqs, testimonials };
+}
+
+/** Busca todo o conteúdo público. Retorna null se o Supabase não estiver configurado. */
+export async function fetchSiteContent(): Promise<SiteContent | null> {
+  if (!isSupabaseConfigured) return null;
+  return mapContent(await fetchContentRows());
+}
+
+/** Aplica o rascunho da pré-visualização sobre as linhas publicadas. Função pura (testável). */
+export function applyPreviewDraft(rows: ContentRows, draft: PreviewDraft | null): ContentRows {
+  if (!draft) return rows;
+  const sections = rows.sections.map((row) => {
+    const d = draft.sections[row.key as SectionKey];
+    return d ? { ...row, ...d } : row;
   });
+  const { logo, og, ...fields } = draft.settings;
+  const settings = rows.settings && {
+    ...rows.settings,
+    ...fields,
+    ...(logo !== undefined && { logo }),
+    ...(og !== undefined && { og }),
+  };
+  return { ...rows, sections, settings };
+}
+
+let publishedRows: Promise<ContentRows> | null = null;
+
+/** Conteúdo da pré-visualização: as linhas publicadas são buscadas uma vez e o rascunho é reaplicado a cada mudança. */
+export async function fetchPreviewContent(): Promise<SiteContent | null> {
+  if (!isSupabaseConfigured) return null;
+  publishedRows ??= fetchContentRows().catch((e: unknown) => {
+    publishedRows = null;
+    throw e;
+  });
+  return mapContent(applyPreviewDraft(await publishedRows, readPreviewDraft()));
 }
