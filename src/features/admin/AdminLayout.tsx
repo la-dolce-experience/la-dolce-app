@@ -1,15 +1,26 @@
 import {
   ArchiveRestore,
+  Camera,
+  CircleHelp,
+  ClipboardList,
   ExternalLink,
-  House,
+  HeartHandshake,
+  IceCreamCone,
   Images,
   KeyRound,
   LayoutDashboard,
+  ListOrdered,
   LogOut,
+  MapPin,
   Menu,
+  MessageSquareQuote,
+  Palette,
+  PartyPopper,
   Phone,
   Search,
+  Sparkles,
   X,
+  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -22,6 +33,22 @@ import { HelpMenu } from './onboarding/HelpMenu';
 import { GuidedTour } from './onboarding/GuidedTour';
 import { LivePreviewPanel, LivePreviewProvider, useLivePreview } from './preview/LivePreview';
 import { SECTION_CONFIG } from './sectionConfig';
+import type { SectionKey } from '../../types/content';
+
+/** Ícone de cada seção no menu lateral. */
+const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
+  hero: Sparkles,
+  experience: HeartHandshake,
+  events: PartyPopper,
+  flavors: IceCreamCone,
+  personalization: Palette,
+  steps: ListOrdered,
+  gallery: Camera,
+  testimonials: MessageSquareQuote,
+  quote: ClipboardList,
+  location: MapPin,
+  faq: CircleHelp,
+};
 
 export function AdminLayout() {
   return (
@@ -118,7 +145,10 @@ function AdminShell() {
             Página inicial
           </p>
           <ul className={a.navGroup} aria-labelledby="nav-home" data-tour="nav-sections">
-            {SECTION_CONFIG.map((s) => link(`/admin/secoes/${s.key}`, s.label, <House aria-hidden="true" />))}
+            {SECTION_CONFIG.map((s) => {
+              const Icon = SECTION_ICONS[s.key];
+              return link(`/admin/secoes/${s.key}`, s.label, <Icon aria-hidden="true" />);
+            })}
           </ul>
 
           <p className={a.navTitle} id="nav-config">
