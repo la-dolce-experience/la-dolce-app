@@ -20,14 +20,25 @@ import { useFeedback } from './components/Feedback';
 import { useAnyDirty } from './components/UnsavedChanges';
 import { HelpMenu } from './onboarding/HelpMenu';
 import { GuidedTour } from './onboarding/GuidedTour';
+import { LivePreviewPanel, LivePreviewProvider, useLivePreview } from './preview/LivePreview';
 import { SECTION_CONFIG } from './sectionConfig';
 
 export function AdminLayout() {
+  return (
+    <LivePreviewProvider>
+      <AdminShell />
+    </LivePreviewProvider>
+  );
+}
+
+function AdminShell() {
   const { session, signOut } = useAuth();
   const { confirm } = useFeedback();
   const dirty = useAnyDirty();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const preview = useLivePreview();
+  const previewVisible = preview.open && preview.anchor !== undefined;
   // Primeiro acesso: o tour abre sozinho até ser concluído ou pulado uma vez.
   const [guideOpen, setGuideOpen] = useState(() => !session?.user.user_metadata?.onboarding_completed_at);
 
@@ -41,6 +52,12 @@ export function AdminLayout() {
 
   // Ao trocar de página: leva o foco ao título (leitores de tela) e volta ao topo.
   // Durante o tour, quem controla foco e rolagem é o próprio tour.
+  // O tour destaca elementos do painel: a pré-visualização ficaria por cima.
+  useEffect(() => {
+    if (guideOpen) preview.hide();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guideOpen]);
+
   useEffect(() => {
     if (guideOpen) return;
     requestAnimationFrame(() => document.getElementById('admin-page-title')?.focus({ preventScroll: true }));
@@ -72,7 +89,7 @@ export function AdminLayout() {
   );
 
   return (
-    <div className={a.shell}>
+    <div className={`${a.shell} ${previewVisible ? a.shellWithPreview : ''}`}>
       <a className="skip-link" href="#admin-main">
         Pular para o conteúdo
       </a>
@@ -139,6 +156,7 @@ export function AdminLayout() {
           <Outlet />
         </div>
       </main>
+      {!guideOpen && <LivePreviewPanel />}
       {guideOpen && <GuidedTour onClose={closeGuide} />}
     </div>
   );

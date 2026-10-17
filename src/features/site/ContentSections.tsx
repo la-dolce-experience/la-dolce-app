@@ -1,7 +1,6 @@
 import { ArrowRight, Check, ChevronDown } from 'lucide-react';
 import { ButtonLink } from '../../components/Button/Button';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
-import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
@@ -116,76 +115,6 @@ export function StepsSection() {
             </li>
           ))}
         </ol>
-      </div>
-    </section>
-  );
-}
-
-export function GallerySection() {
-  const { content } = useSiteContent();
-  const section = content.sections.gallery;
-  if (!section.visible || content.gallery.length === 0) return null;
-
-  return (
-    <section id="galeria" className={styles.section} aria-labelledby="gallery-title">
-      <div className="container">
-        <SectionHeading
-          id="gallery-title"
-          align="center"
-          eyebrow={section.eyebrow}
-          title={section.title}
-          body={section.body}
-        />
-        <ul className={styles.gallery}>
-          {content.gallery.map((item, index) => (
-            <li key={item.id}>
-              <figure className={styles.galleryItem}>
-                <ResponsiveImage
-                  image={item.image}
-                  sizes={
-                    index === 0
-                      ? '(min-width: 960px) 680px, 100vw'
-                      : '(min-width: 960px) 440px, (min-width: 640px) 50vw, 100vw'
-                  }
-                />
-                {item.caption && <figcaption>{item.caption}</figcaption>}
-              </figure>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-export function TestimonialsSection() {
-  const { content } = useSiteContent();
-  const section = content.sections.testimonials;
-  if (!section.visible || content.testimonials.length === 0) return null;
-
-  return (
-    <section id="depoimentos" className={styles.section} aria-labelledby="testimonials-title">
-      <div className="container">
-        <SectionHeading
-          id="testimonials-title"
-          align="center"
-          eyebrow={section.eyebrow}
-          title={section.title}
-          body={section.body}
-        />
-        <ul className={styles.testimonials}>
-          {content.testimonials.map((t) => (
-            <li key={t.id}>
-              <figure className={styles.testimonial}>
-                <blockquote className="prewrap">“{t.quote}”</blockquote>
-                <figcaption>
-                  <strong>{t.author}</strong>
-                  {t.context && ` · ${t.context}`}
-                </figcaption>
-              </figure>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );

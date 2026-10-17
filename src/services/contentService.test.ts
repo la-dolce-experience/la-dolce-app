@@ -21,13 +21,70 @@ const emptyRows: ContentRows = {
   sections: [],
   eventTypes: [],
   features: [],
+  flavorItems: [],
   steps: [],
   gallery: [],
   faqs: [],
   testimonials: [],
 };
 
+const testimonial = {
+  context: '',
+  quote: 'x',
+  media_id: null,
+  rating: 5,
+  visible: true,
+};
+
 describe('mapContent', () => {
+  it('separa sabores e apresentações, na ordem e só os visíveis', () => {
+    const flavor = { description: '', media_id: null, media: null, alt: '', visible: true };
+    const content = mapContent({
+      ...emptyRows,
+      flavorItems: [
+        { ...flavor, id: 'c', kind: 'apresentacao', title: 'Casquinha', position: 1 },
+        { ...flavor, id: 'm', kind: 'sabor', title: 'Morango', position: 1 },
+        { ...flavor, id: 'n', kind: 'sabor', title: 'Ninho', position: 0 },
+        { ...flavor, id: 'o', kind: 'sabor', title: 'Oculto', position: 2, visible: false },
+        {
+          ...flavor,
+          id: 'p',
+          kind: 'apresentacao',
+          title: 'Copinho',
+          position: 0,
+          media_id: 'm1',
+          media: media('m1', 'copinho'),
+        },
+      ],
+    });
+    expect(content.flavors.map((f) => f.title)).toEqual(['Ninho', 'Morango']);
+    expect(content.presentations.map((f) => f.title)).toEqual(['Copinho', 'Casquinha']);
+    expect(content.presentations[0].image?.alt).toBe('Copinho');
+    expect(content.presentations[1].image).toBeNull();
+  });
+
+  it('mantém a nota dos depoimentos entre 1 e 5 e usa a foto quando houver', () => {
+    const content = mapContent({
+      ...emptyRows,
+      testimonials: [
+        { ...testimonial, id: 'a', author: 'Ana', authorized: true, position: 0, rating: 9 },
+        {
+          ...testimonial,
+          id: 'b',
+          author: 'Bia',
+          authorized: true,
+          position: 1,
+          rating: 3,
+          media_id: 'm2',
+          media: media('m2', 'bia'),
+        },
+      ],
+    });
+    expect(content.testimonials.map((t) => t.rating)).toEqual([5, 3]);
+    expect(content.testimonials[0].image).toBeNull();
+    expect(content.testimonials[1].image?.alt).toBe('Bia');
+  });
+
   it('usa o conteúdo padrão para o que não veio do banco', () => {
     const content = mapContent(emptyRows);
     expect(content.settings).toEqual(defaultContent.settings);
@@ -43,8 +100,8 @@ describe('mapContent', () => {
         { id: 'h', question: 'Oculta?', answer: 'h', position: 0, visible: false },
       ],
       testimonials: [
-        { id: 't1', author: 'Sem autorização', context: '', quote: 'x', authorized: false, position: 0, visible: true },
-        { id: 't2', author: 'Autorizado', context: '', quote: 'y', authorized: true, position: 1, visible: true },
+        { ...testimonial, id: 't1', author: 'Sem autorização', authorized: false, position: 0 },
+        { ...testimonial, id: 't2', author: 'Autorizado', authorized: true, position: 1 },
       ],
     });
     expect(content.faqs.map((f) => f.id)).toEqual(['a', 'b']);

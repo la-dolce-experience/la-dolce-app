@@ -90,3 +90,73 @@
   font-size: var(--fs-sm);
   cursor: pointer;
 }
+
+/* ---------- Estrelas ---------- */
+.rating {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.rating legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  color: var(--color-text-soft);
+}
+
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.star,
+.starOn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-border-strong);
+}
+
+.starOn {
+  color: #f5a524;
+}
+
+.star svg,
+.starOn svg {
+  width: 30px;
+  height: 30px;
+}
+
+.starOn svg {
+  fill: currentColor;
+}
+
+.stars input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.star:has(input:focus-visible),
+.starOn:has(input:focus-visible) {
+  box-shadow: 0 0 0 3px rgba(226, 43, 99, 0.35);
+}
+
+.ratingValue {
+  margin-left: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}

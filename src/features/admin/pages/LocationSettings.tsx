@@ -22,7 +22,7 @@ export function LocationSettings() {
       ]}
     >
       {({ values, set, errors }) => (
-        <section className={a.panel} aria-labelledby="location-data-title">
+        <section className={a.panel} aria-labelledby="location-data-title" data-tour="location">
           <div className={a.panelHeader}>
             <div>
               <h2 id="location-data-title">Dados de atendimento</h2>

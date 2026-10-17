@@ -1,0 +1,133 @@
+/* Celular e telas médias: ocupa a tela inteira, acima do painel. */
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) 0 var(--space-4);
+}
+
+.header h2 {
+  font-size: var(--fs-md, 1rem);
+  letter-spacing: -0.01em;
+}
+
+.tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.devices {
+  display: flex;
+  padding: 3px;
+  margin-right: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.devices button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.devices button[aria-pressed='true'] {
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.devices svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+}
+
+.icon:hover,
+.devices button:hover:not([aria-pressed='true']) {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.panel :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.hint {
+  padding: var(--space-1) var(--space-4) var(--space-3);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-xs);
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.frame {
+  position: absolute;
+  top: 0;
+  /* A largura é a do aparelho simulado; o scale() encaixa no painel (o global limita iframes a 100%). */
+  max-width: none;
+  border: 0;
+  background: #fff;
+  transform-origin: top left;
+}
+
+/* Abaixo de 380px os rótulos dos botões não cabem: ficam só os ícones. */
+@media (max-width: 379px) {
+  .devices button {
+    padding: 0 var(--space-2);
+    font-size: 0;
+    gap: 0;
+  }
+}
+
+/* Telas largas: coluna fixa à direita, com o formulário visível ao lado. */
+@media (min-width: 1280px) {
+  .panel {
+    inset: 0 0 0 auto;
+    width: 460px;
+    z-index: var(--z-header);
+    box-shadow: -12px 0 40px rgba(33, 5, 19, 0.18);
+  }
+}

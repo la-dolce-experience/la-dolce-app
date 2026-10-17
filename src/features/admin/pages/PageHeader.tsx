@@ -1,17 +1,21 @@
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Eye } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
-import { ButtonLink } from '../../../components/Button/Button';
+import { Button, ButtonLink } from '../../../components/Button/Button';
 import a from '../admin.module.css';
+import { useLivePreview, usePreviewTarget } from '../preview/LivePreview';
 
 interface Props {
   breadcrumb?: string;
   title: string;
   description?: ReactNode;
-  /** Âncora do site para o botão "Ver no site" ('' = topo). */
+  /** Parte do site editada nesta tela ('' = topo): ativa a pré-visualização e o "Ver no site". */
   previewAnchor?: string;
 }
 
 export function PageHeader({ breadcrumb, title, description, previewAnchor }: Props) {
+  const { open: previewOpen, show: showPreview } = useLivePreview();
+  usePreviewTarget(previewAnchor);
+
   useEffect(() => {
     document.title = `${title} | Painel La Dolce`;
   }, [title]);
@@ -26,17 +30,30 @@ export function PageHeader({ breadcrumb, title, description, previewAnchor }: Pr
         {description && <p>{description}</p>}
       </div>
       {previewAnchor !== undefined && (
-        <ButtonLink
-          variant="outline"
-          size="sm"
-          href={`/${previewAnchor ? `#${previewAnchor}` : ''}`}
-          target="_blank"
-          rel="noopener"
-          icon={<ExternalLink aria-hidden="true" />}
-          data-tour="view-site"
-        >
-          Ver no site
-        </ButtonLink>
+        <div className={a.pageHeaderActions}>
+          {!previewOpen && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<Eye aria-hidden="true" />}
+              onClick={showPreview}
+              data-tour="preview-open"
+            >
+              Pré-visualizar
+            </Button>
+          )}
+          <ButtonLink
+            variant="outline"
+            size="sm"
+            href={`/${previewAnchor ? `#${previewAnchor}` : ''}`}
+            target="_blank"
+            rel="noopener"
+            icon={<ExternalLink aria-hidden="true" />}
+            data-tour="view-site"
+          >
+            Ver no site
+          </ButtonLink>
+        </div>
       )}
     </header>
   );

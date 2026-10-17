@@ -28,6 +28,7 @@ export default tseslint.config(
       'src/features/admin/auth/AuthProvider.tsx',
       'src/features/admin/components/Feedback.tsx',
       'src/features/admin/components/UnsavedChanges.tsx',
+      'src/features/admin/preview/LivePreview.tsx',
     ],
     rules: { 'react-refresh/only-export-components': 'off' },
   },

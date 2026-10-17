@@ -16,13 +16,14 @@ interface ChecklistItem {
 }
 
 async function loadOverview() {
-  const [settings, sections, faqs, steps, testimonials, gallery] = await Promise.all([
+  const [settings, sections, faqs, steps, testimonials, gallery, flavors] = await Promise.all([
     getSettings(),
     listSections(),
     listItems('faqs'),
     listItems('steps'),
     listItems('testimonials'),
     listItems('gallery_items'),
+    listItems('flavor_items', { column: 'kind', value: 'sabor' }),
   ]);
   const checklist: ChecklistItem[] = [
     { done: !!settings.instagram_url, label: 'Link do Instagram', to: '/admin/contato' },
@@ -33,6 +34,7 @@ async function loadOverview() {
       label: 'Área de atendimento ou endereço',
       to: '/admin/secoes/location',
     },
+    { done: flavors.length > 0, label: 'Sabores de sorvete', to: '/admin/secoes/flavors' },
     { done: steps.length > 0, label: 'Etapas de "Como funciona"', to: '/admin/secoes/steps' },
     { done: faqs.length > 0, label: 'Perguntas frequentes', to: '/admin/secoes/faq' },
     {

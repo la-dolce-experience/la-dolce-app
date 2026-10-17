@@ -19,6 +19,7 @@ import styles from './TrashPage.module.css';
 const ORIGIN: Record<string, { item: string; section: string; label: string }> = {
   event_types: { item: 'Tipo de evento', section: 'events', label: 'Tipos de evento' },
   features: { item: 'Diferencial', section: 'personalization', label: 'Personalização' },
+  flavor_items: { item: 'Sabor ou apresentação', section: 'flavors', label: 'Sabores e apresentação' },
   steps: { item: 'Etapa', section: 'steps', label: 'Como funciona' },
   gallery_items: { item: 'Foto da galeria', section: 'gallery', label: 'Galeria' },
   faqs: { item: 'Pergunta frequente', section: 'faq', label: 'Perguntas frequentes' },

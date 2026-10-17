@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import type { Section } from '../../types/content';
@@ -10,10 +11,12 @@ interface Props {
   imageRight?: boolean;
   /** Produto recortado (fundo transparente): "contain" em vez de "cover". */
   contain?: boolean;
+  /** Conteúdo extra abaixo do texto e da foto (ex.: lista de sabores). */
+  children?: ReactNode;
 }
 
 /** Seção de texto + foto, usada em "Experiência" e "Sabores e apresentação". */
-export function SplitSection({ id, section, imageRight = false, contain = false }: Props) {
+export function SplitSection({ id, section, imageRight = false, contain = false, children }: Props) {
   if (!section.visible) return null;
   const headingId = `${section.key}-title`;
   return (
@@ -26,6 +29,7 @@ export function SplitSection({ id, section, imageRight = false, contain = false 
         )}
         <SectionHeading id={headingId} eyebrow={section.eyebrow} title={section.title} body={section.body} />
       </div>
+      {children}
     </section>
   );
 }

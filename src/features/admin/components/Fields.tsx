@@ -1,3 +1,4 @@
+import { Star } from 'lucide-react';
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 import styles from './Fields.module.css';
 
@@ -143,5 +144,49 @@ export function ToggleField({
         )}
       </div>
     </div>
+  );
+}
+
+/** Nota de 1 a 5 estrelas (grupo de rádios: setas do teclado mudam a nota). */
+export function RatingField({
+  id,
+  label,
+  help,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  help?: ReactNode;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <fieldset className={styles.rating} aria-describedby={help ? `${id}-help` : undefined}>
+      <legend>{label}</legend>
+      <div className={styles.stars}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <label key={n} className={n <= value ? styles.starOn : styles.star}>
+            <input
+              type="radio"
+              name={id}
+              value={n}
+              checked={value === n}
+              onChange={() => onChange(n)}
+              aria-label={n === 1 ? '1 estrela' : `${n} estrelas`}
+            />
+            <Star aria-hidden="true" />
+          </label>
+        ))}
+        <span className={styles.ratingValue} aria-hidden="true">
+          {value} de 5
+        </span>
+      </div>
+      {help && (
+        <p id={`${id}-help`} className={styles.help}>
+          {help}
+        </p>
+      )}
+    </fieldset>
   );
 }
