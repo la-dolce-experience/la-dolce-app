@@ -175,8 +175,8 @@ export const TOUR_STEPS: TourStep[] = [
     body: (
       <>
         <p>
-          Cada depoimento pode ter <strong>foto</strong> e uma nota de <strong>1 a 5 estrelas</strong>. No site, eles
-          passam em carrossel.
+          Cada depoimento tem nota de <strong>1 a 5 estrelas</strong> e pode ter até <strong>5 fotos do evento</strong>,
+          que abrem em tela cheia como na galeria, além de uma foto de perfil. No site, eles passam em carrossel.
         </p>
         <p>
           Só aparecem os marcados com <strong>Tenho autorização para publicar</strong>.

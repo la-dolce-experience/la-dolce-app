@@ -13,7 +13,7 @@ export interface ListConfig {
   itemName: string;
   titleField: string;
   fields: FieldDef[];
-  defaults: Record<string, string | number | boolean | null>;
+  defaults: Record<string, string | number | boolean | string[] | null>;
   emptyText: string;
 }
 
@@ -238,7 +238,7 @@ export const SECTION_CONFIG: SectionConfig[] = [
     key: 'testimonials',
     label: 'Depoimentos',
     description:
-      'Somente depoimentos reais, com autorização de uso. No site eles passam em carrossel, com estrelas e foto. A seção só aparece quando houver depoimento autorizado.',
+      'Somente depoimentos reais, com autorização de uso. No site eles passam em carrossel, com estrelas, foto de perfil e até 5 fotos do evento. A seção só aparece quando houver depoimento autorizado.',
     anchor: 'depoimentos',
     hiddenWhenEmpty: true,
     fields: {
@@ -264,10 +264,17 @@ export const SECTION_CONFIG: SectionConfig[] = [
           { key: 'quote', label: 'Depoimento', type: 'textarea', required: true, maxLength: 800, rows: 4 },
           { key: 'rating', label: 'Avaliação', type: 'rating', help: 'Toque nas estrelas: de 1 a 5.' },
           {
+            key: 'photo_media_ids',
+            label: 'Fotos do evento (opcional)',
+            type: 'media-list',
+            max: 5,
+            help: 'Até 5 fotos. No site aparecem abaixo do depoimento; ao tocar, abrem em tela cheia, em carrossel.',
+          },
+          {
             key: 'media_id',
-            label: 'Foto (opcional)',
+            label: 'Foto de perfil (opcional)',
             type: 'media',
-            help: 'Foto da pessoa ou do evento, também com autorização. Aparece em círculo ao lado do nome.',
+            help: 'Foto de quem deu o depoimento. Aparece em círculo ao lado do nome.',
           },
           {
             key: 'authorized',
@@ -277,7 +284,7 @@ export const SECTION_CONFIG: SectionConfig[] = [
           },
           visibleField,
         ],
-        defaults: { visible: true, authorized: false, rating: 5, media_id: null },
+        defaults: { visible: true, authorized: false, rating: 5, media_id: null, photo_media_ids: [] },
         emptyText: 'Nenhum depoimento cadastrado. A seção está oculta no site.',
       },
     ],

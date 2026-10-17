@@ -20,19 +20,21 @@ import a from '../admin.module.css';
 import { useFeedback } from './Feedback';
 import { useLivePreview } from '../preview/LivePreview';
 import { RatingField, TextAreaField, TextField, ToggleField } from './Fields';
-import { ImagePicker } from './ImagePicker';
+import { ImageListPicker, ImagePicker } from './ImagePicker';
 import { useTrackDirty } from './UnsavedChanges';
 import styles from './ListEditor.module.css';
 
-type Values = Record<string, string | number | boolean | null>;
+type Values = Record<string, string | number | boolean | string[] | null>;
 
 export interface FieldDef {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'checkbox' | 'media' | 'rating';
+  type: 'text' | 'textarea' | 'checkbox' | 'media' | 'media-list' | 'rating';
   required?: boolean;
   maxLength?: number;
   rows?: number;
+  /** Máximo de imagens (campos 'media-list'). */
+  max?: number;
   help?: string;
 }
 
@@ -65,6 +67,7 @@ const EMPTY: Record<FieldDef['type'], Values[string]> = {
   textarea: '',
   checkbox: false,
   media: null,
+  'media-list': [],
   rating: 5,
 };
 
@@ -87,7 +90,8 @@ export function ListEditor<T extends ListTable>({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [media, setMedia] = useState<Map<string, MediaRow>>(new Map());
   const [reordering, setReordering] = useState(false);
-  const hasMedia = fields.some((f) => f.type === 'media');
+  const hasMedia = fields.some((f) => f.type === 'media' || f.type === 'media-list');
+  const photosField = fields.find((f) => f.type === 'media-list')?.key;
   const { open: previewing, show: showPreview } = useLivePreview();
   /** Valores na tela de cada cartão (inclusive os não salvos), para a pré-visualização. */
   const [live, setLive] = useState<Record<string, Values>>({});
@@ -131,6 +135,8 @@ export function ListEditor<T extends ListTable>({
         id: item.id ?? item.key,
         position: index,
         ...(hasMedia && { media: mediaId ? (media.get(mediaId) ?? null) : null }),
+        // Imagens das fotos múltiplas, já resolvidas (ver mapContent).
+        ...(photosField && { photos: resolveMedia(values[photosField], media) }),
       };
     });
   }
@@ -486,6 +492,24 @@ function ItemCard({
               />
             );
           }
+          if (f.type === 'media-list') {
+            return (
+              <ImageListPicker
+                key={f.key}
+                label={f.label}
+                help={f.help}
+                max={f.max ?? 5}
+                items={resolveMedia(value, media)}
+                onChange={(list) => {
+                  list.forEach(onMediaAdded);
+                  set(
+                    f.key,
+                    list.map((m) => m.id),
+                  );
+                }}
+              />
+            );
+          }
           if (f.type === 'media') {
             return (
               <div key={f.key}>
@@ -540,6 +564,10 @@ function ItemCard({
       </div>
     </li>
   );
+}
+
+function resolveMedia(ids: Values[string], media: Map<string, MediaRow>): MediaRow[] {
+  return Array.isArray(ids) ? ids.map((id) => media.get(id)).filter((m): m is MediaRow => !!m) : [];
 }
 
 function capitalize(s: string) {
