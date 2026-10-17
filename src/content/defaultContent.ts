@@ -168,6 +168,11 @@ export const defaultContent: SiteContent = {
     { id: 'f3', label: 'Estação elegante e instagramável' },
     { id: 'f4', label: 'Atendimento direto e personalizado' },
   ],
+  flavors: [],
+  presentations: [
+    { id: 'p1', title: 'Copinho', description: '', image: IMAGES.cup },
+    { id: 'p2', title: 'Casquinha', description: '', image: IMAGES.cone },
+  ],
   steps: [],
   gallery: [
     { id: 'g1', image: { ...IMAGES.station, alt: 'Balcão La Dolce Experience para eventos' }, caption: '' },

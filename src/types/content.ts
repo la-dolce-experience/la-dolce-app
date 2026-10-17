@@ -96,11 +96,23 @@ export interface Faq {
   answer: string;
 }
 
+/** Sabor ou forma de servir (copinho, casquinha...). */
+export interface FlavorItem {
+  id: string;
+  title: string;
+  description: string;
+  image: ImageRef | null;
+}
+
 export interface Testimonial {
   id: string;
   author: string;
   context: string;
   quote: string;
+  /** Nota de 1 a 5 estrelas. */
+  rating: number;
+  /** Foto de quem deu o depoimento ou do evento (opcional). */
+  image: ImageRef | null;
 }
 
 export interface SiteContent {
@@ -108,6 +120,8 @@ export interface SiteContent {
   sections: Record<SectionKey, Section>;
   eventTypes: EventType[];
   features: Feature[];
+  flavors: FlavorItem[];
+  presentations: FlavorItem[];
   steps: Step[];
   gallery: GalleryItem[];
   faqs: Faq[];

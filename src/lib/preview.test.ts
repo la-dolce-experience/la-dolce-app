@@ -67,11 +67,42 @@ describe('rascunho da pré-visualização', () => {
     const result = applyPreviewDraft(rows, {
       sections: { hero: heroDraft },
       settings: { whatsapp_number: '5511999990000', logo: media },
+      lists: {},
       updatedAt: '',
     });
     expect(result.sections[0]).toMatchObject({ key: 'hero', title: 'Título em rascunho', media });
     expect(result.sections[1]).toBe(rows.sections[1]);
     expect(result.settings).toMatchObject({ whatsapp_number: '5511999990000', business_name: 'La Dolce', logo: media });
     expect(applyPreviewDraft(rows, null)).toBe(rows);
+  });
+
+  it('substitui só o recorte da lista em rascunho e limpa a lista ao sair da tela', () => {
+    const rows = {
+      settings: null,
+      sections: [],
+      flavorItems: [
+        { id: 's1', kind: 'sabor', title: 'Publicado', position: 0 },
+        { id: 'a1', kind: 'apresentacao', title: 'Copinho', position: 0 },
+      ],
+      faqs: [{ id: 'f1', question: 'Publicada?', position: 0 }],
+    } as unknown as ContentRows;
+
+    const scope = { column: 'kind', value: 'sabor' } as const;
+    updatePreviewDraft({
+      list: {
+        table: 'flavor_items',
+        scope,
+        rows: [
+          { id: 's1', kind: 'sabor', title: 'Editado', position: 0 },
+          { id: 'novo-1', kind: 'sabor', title: 'Novo', position: 1 },
+        ],
+      },
+    });
+    const result = applyPreviewDraft(rows, readPreviewDraft());
+    expect(result.flavorItems.map((f) => f.title)).toEqual(['Copinho', 'Editado', 'Novo']);
+    expect(result.faqs).toBe(rows.faqs);
+
+    clearPreviewDraft({ list: 'flavor_items:sabor' });
+    expect(localStorage.getItem(PREVIEW_STORAGE_KEY)).toBeNull();
   });
 });

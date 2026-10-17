@@ -547,3 +547,16 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+.pageHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Pré-visualização aberta em tela larga: o conteúdo abre espaço para a coluna do site à direita. */
+@media (min-width: 1280px) {
+  .shellWithPreview .main {
+    padding-right: calc(460px + var(--space-6));
+  }
+}

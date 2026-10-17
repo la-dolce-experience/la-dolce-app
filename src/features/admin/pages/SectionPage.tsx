@@ -2,7 +2,7 @@ import { Info, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/Button/Button';
-import { clearPreviewDraft, openPreview, updatePreviewDraft, type SectionDraft } from '../../../lib/preview';
+import { clearPreviewDraft, updatePreviewDraft, type SectionDraft } from '../../../lib/preview';
 import { getSection, listMedia, updateSection, type MediaRow, type SectionRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
 import { SECTION_KEYS, type SectionKey } from '../../../types/content';
@@ -14,6 +14,7 @@ import { ListEditor } from '../components/ListEditor';
 import { SaveBar } from '../components/SaveBar';
 import { useTrackDirty } from '../components/UnsavedChanges';
 import { useFormState } from '../hooks';
+import { useLivePreview } from '../preview/LivePreview';
 import { sectionConfigByKey, type SectionConfig } from '../sectionConfig';
 import { LocationSettings } from './LocationSettings';
 import { PageHeader } from './PageHeader';
@@ -61,7 +62,7 @@ function SectionEditor({ config }: { config: SectionConfig }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [titleError, setTitleError] = useState<string>();
-  const [previewing, setPreviewing] = useState(false);
+  const { open: previewing, show: showPreview } = useLivePreview();
   useTrackDirty(`section:${config.key}`, form.dirty);
 
   const draft = (): SectionDraft | null =>
@@ -86,8 +87,7 @@ function SectionEditor({ config }: { config: SectionConfig }) {
     const d = draft();
     if (!d) return;
     updatePreviewDraft({ section: [config.key, d] });
-    setPreviewing(true);
-    openPreview(config.anchor);
+    showPreview();
   }
 
   const [attempt, setAttempt] = useState(0);
@@ -186,6 +186,7 @@ function SectionEditor({ config }: { config: SectionConfig }) {
         <form
           className={a.panel}
           aria-labelledby="section-form-title"
+          data-tour="section-form"
           noValidate
           onSubmit={(e) => {
             e.preventDefault();
@@ -269,7 +270,9 @@ function SectionEditor({ config }: { config: SectionConfig }) {
         </div>
       )}
 
-      {config.list && <ListEditor key={config.list.table} {...config.list} />}
+      {config.lists?.map((list) => (
+        <ListEditor key={`${list.table}:${list.scope?.value ?? ''}`} {...list} />
+      ))}
     </>
   );
 }

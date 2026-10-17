@@ -1,11 +1,12 @@
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '../../../components/Button/Button';
-import { clearPreviewDraft, openPreview, updatePreviewDraft, type SettingsDraft } from '../../../lib/preview';
+import { clearPreviewDraft, updatePreviewDraft, type SettingsDraft } from '../../../lib/preview';
 import { getSettings, listMedia, updateSettings, type MediaRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
 import a from '../admin.module.css';
 import { useFormState } from '../hooks';
+import { useLivePreview } from '../preview/LivePreview';
 import {
   normalizeSettings,
   rowToForm,
@@ -44,7 +45,8 @@ export function SettingsEditor({ formKey, fields, children, previewAnchor }: Pro
   const [errors, setErrors] = useState<SettingsErrors>({});
   const [media, setMedia] = useState<Map<string, MediaRow>>(new Map());
   const form = useFormState<SettingsForm>();
-  const [previewing, setPreviewing] = useState(false);
+  const { open: livePreview, show: showPreview } = useLivePreview();
+  const previewing = livePreview && previewAnchor !== undefined;
   useTrackDirty(formKey, form.dirty);
 
   const draft = (): SettingsDraft | null => {
@@ -73,8 +75,7 @@ export function SettingsEditor({ formKey, fields, children, previewAnchor }: Pro
     const d = draft();
     if (!d) return;
     updatePreviewDraft({ settings: d });
-    setPreviewing(true);
-    openPreview(previewAnchor);
+    showPreview();
   }
 
   const [attempt, setAttempt] = useState(0);

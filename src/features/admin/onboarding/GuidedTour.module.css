@@ -33,10 +33,11 @@
 
 .card {
   position: fixed;
+  display: flex;
+  flex-direction: column;
   width: min(380px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  padding: var(--space-5, 1.25rem);
+  overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
@@ -56,20 +57,34 @@
   transform: translate(-50%, -50%);
 }
 
+/* Celular: folha presa ao topo ou ao rodapé, do lado oposto ao destaque. */
 .card[data-placement='sheet-bottom'],
 .card[data-placement='sheet-top'] {
-  left: 12px;
-  right: 12px;
+  left: 8px;
+  right: 8px;
   width: auto;
-  max-height: 45dvh;
+  max-height: min(52dvh, 440px);
 }
 
 .card[data-placement='sheet-bottom'] {
-  bottom: max(12px, env(safe-area-inset-bottom));
+  bottom: max(8px, env(safe-area-inset-bottom));
 }
 
 .card[data-placement='sheet-top'] {
-  top: 12px;
+  top: max(8px, env(safe-area-inset-top));
+}
+
+.head {
+  flex: none;
+  padding: var(--space-4) var(--space-4) 0 var(--space-5, 1.25rem);
+}
+
+.scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-5, 1.25rem) var(--space-2);
 }
 
 .top {
@@ -110,7 +125,7 @@
 
 .bar {
   height: 4px;
-  margin: var(--space-2) 0 var(--space-4);
+  margin: var(--space-2) var(--space-1) var(--space-4) 0;
   border-radius: var(--radius-pill);
   background: var(--color-border);
   overflow: hidden;
@@ -130,8 +145,11 @@
   margin-bottom: var(--space-2);
 }
 
-.card h2:focus {
+/* O foco vai para o título só para leitores de tela anunciarem o passo: sem contorno visível. */
+.card h2:focus,
+.card h2:focus-visible {
   outline: none;
+  box-shadow: none;
 }
 
 .body {
@@ -154,11 +172,19 @@
 }
 
 .actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
-  margin-top: var(--space-5, 1.25rem);
+  padding: var(--space-3) var(--space-5, 1.25rem) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Botões do mesmo tamanho, largos o bastante para o dedo e sem quebrar o texto. */
+.actions > * {
+  width: 100%;
+  min-height: 44px;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {

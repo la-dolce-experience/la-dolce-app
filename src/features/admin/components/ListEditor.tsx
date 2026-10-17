@@ -1,6 +1,7 @@
-import { ArrowDown, ArrowUp, LoaderCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, LoaderCircle, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../../components/Button/Button';
+import { clearPreviewDraft, listDraftKey, updatePreviewDraft, type ListDraftRow } from '../../../lib/preview';
 import {
   deleteItem,
   insertItem,
@@ -9,6 +10,7 @@ import {
   reorderItems,
   updateItem,
   type ListRow,
+  type ListScope,
   type ListTable,
   type MediaRow,
 } from '../../../services/adminService';
@@ -16,17 +18,18 @@ import { toFriendlyError } from '../../../services/errors';
 import type { TablesInsert } from '../../../types/database';
 import a from '../admin.module.css';
 import { useFeedback } from './Feedback';
-import { TextAreaField, TextField, ToggleField } from './Fields';
+import { useLivePreview } from '../preview/LivePreview';
+import { RatingField, TextAreaField, TextField, ToggleField } from './Fields';
 import { ImagePicker } from './ImagePicker';
 import { useTrackDirty } from './UnsavedChanges';
 import styles from './ListEditor.module.css';
 
-type Values = Record<string, string | boolean | null>;
+type Values = Record<string, string | number | boolean | null>;
 
 export interface FieldDef {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'checkbox' | 'media';
+  type: 'text' | 'textarea' | 'checkbox' | 'media' | 'rating';
   required?: boolean;
   maxLength?: number;
   rows?: number;
@@ -35,6 +38,8 @@ export interface FieldDef {
 
 interface Props<T extends ListTable> {
   table: T;
+  /** Recorte da tabela editado por esta lista (ex.: só os sabores de flavor_items). */
+  scope?: ListScope;
   title: string;
   description?: string;
   /** Nome de um item no singular, ex.: "pergunta". */
@@ -55,13 +60,20 @@ interface Item {
   values: Values;
 }
 
+const EMPTY: Record<FieldDef['type'], Values[string]> = {
+  text: '',
+  textarea: '',
+  checkbox: false,
+  media: null,
+  rating: 5,
+};
+
 const pick = (row: Record<string, unknown>, fields: FieldDef[]): Values =>
-  Object.fromEntries(
-    fields.map((f) => [f.key, (row[f.key] as Values[string]) ?? (f.type === 'checkbox' ? false : '')]),
-  );
+  Object.fromEntries(fields.map((f) => [f.key, (row[f.key] as Values[string]) ?? EMPTY[f.type]]));
 
 export function ListEditor<T extends ListTable>({
   table,
+  scope,
   title,
   description,
   itemName,
@@ -76,12 +88,16 @@ export function ListEditor<T extends ListTable>({
   const [media, setMedia] = useState<Map<string, MediaRow>>(new Map());
   const [reordering, setReordering] = useState(false);
   const hasMedia = fields.some((f) => f.type === 'media');
+  const { open: previewing, show: showPreview } = useLivePreview();
+  /** Valores na tela de cada cartão (inclusive os não salvos), para a pré-visualização. */
+  const [live, setLive] = useState<Record<string, Values>>({});
+  const draftKey = listDraftKey(table, scope);
 
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    Promise.all([listItems(table), hasMedia ? listMedia() : Promise.resolve([])]).then(
+    Promise.all([listItems(table, scope), hasMedia ? listMedia() : Promise.resolve([])]).then(
       ([rows, mediaRows]) => {
         if (!active) return;
         setMedia(new Map(mediaRows.map((m) => [m.id, m])));
@@ -103,6 +119,37 @@ export function ListEditor<T extends ListTable>({
   }, [table, attempt]);
 
   const [highlighted, setHighlighted] = useState<string | null>(null);
+
+  /** A lista como está na tela, no formato das linhas do banco e na ordem do site. */
+  function draftRows(): ListDraftRow[] {
+    return (items ?? []).map((item, index) => {
+      const values = live[item.key] ?? item.values;
+      const mediaId = typeof values.media_id === 'string' ? values.media_id : null;
+      return {
+        ...values,
+        ...(scope && { [scope.column]: scope.value }),
+        id: item.id ?? item.key,
+        position: index,
+        ...(hasMedia && { media: mediaId ? (media.get(mediaId) ?? null) : null }),
+      };
+    });
+  }
+
+  // Com a pré-visualização aberta, cada alteração na lista aparece nela (com uma pequena pausa enquanto digita).
+  useEffect(() => {
+    if (!previewing || !items) return;
+    const timer = setTimeout(() => updatePreviewDraft({ list: { table, scope, rows: draftRows() } }), 250);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewing, items, live, media]);
+
+  // Ao sair da tela, o rascunho desta lista deixa de valer.
+  useEffect(() => () => clearPreviewDraft({ list: draftKey }), [draftKey]);
+
+  function preview() {
+    if (items) updatePreviewDraft({ list: { table, scope, rows: draftRows() } });
+    showPreview();
+  }
 
   /** Novos itens entram no fim, como no site: a tela rola até o rascunho e o primeiro campo recebe o foco. */
   function addDraft() {
@@ -156,6 +203,12 @@ export function ListEditor<T extends ListTable>({
     [items],
   );
 
+  const previewButton = (
+    <Button variant="ghost" size="sm" icon={<Eye aria-hidden="true" />} onClick={preview} disabled={!items}>
+      Pré-visualizar
+    </Button>
+  );
+
   const addButton = (
     <Button size="sm" icon={<Plus aria-hidden="true" />} onClick={addDraft} disabled={!items} data-tour="list-add">
       Adicionar {itemName}
@@ -163,14 +216,21 @@ export function ListEditor<T extends ListTable>({
   );
 
   return (
-    <section className={a.panel} aria-labelledby={`${table}-title`}>
+    <section
+      className={a.panel}
+      aria-labelledby={`${draftKey}-title`}
+      data-tour={`list-${scope ? scope.value : table}`}
+    >
       <div className={a.panelHeader}>
         <div>
-          <h2 id={`${table}-title`}>{title}</h2>
+          <h2 id={`${draftKey}-title`}>{title}</h2>
           {description && <p>{description}</p>}
           <p className={styles.hint}>Itens novos entram no fim da lista, na mesma ordem em que aparecem no site.</p>
         </div>
-        {addButton}
+        <div className={styles.headerActions}>
+          {previewButton}
+          {addButton}
+        </div>
       </div>
 
       {loadError && (
@@ -205,6 +265,7 @@ export function ListEditor<T extends ListTable>({
               index={index}
               total={items.length}
               table={table}
+              scope={scope}
               fields={fields}
               titleField={titleField}
               itemName={itemName}
@@ -213,6 +274,7 @@ export function ListEditor<T extends ListTable>({
               reordering={reordering}
               onMove={(delta) => move(index, delta)}
               onMediaAdded={(m) => setMedia((prev) => new Map(prev).set(m.id, m))}
+              onValuesChange={(values) => setLive((prev) => ({ ...prev, [item.key]: values }))}
               onSaved={(saved) =>
                 setItems((list) =>
                   list!.map((i) =>
@@ -220,7 +282,10 @@ export function ListEditor<T extends ListTable>({
                   ),
                 )
               }
-              onRemoved={() => setItems((list) => list!.filter((i) => i.key !== item.key))}
+              onRemoved={() => {
+                setItems((list) => list!.filter((i) => i.key !== item.key));
+                setLive(({ [item.key]: _removed, ...rest }) => rest);
+              }}
             />
           ))}
         </ol>
@@ -236,6 +301,7 @@ interface CardProps {
   index: number;
   total: number;
   table: ListTable;
+  scope?: ListScope;
   fields: FieldDef[];
   titleField: string;
   itemName: string;
@@ -244,6 +310,7 @@ interface CardProps {
   reordering: boolean;
   onMove: (delta: -1 | 1) => void;
   onMediaAdded: (m: MediaRow) => void;
+  onValuesChange: (values: Values) => void;
   onSaved: (saved: { id: string; position: number; values: Values }) => void;
   onRemoved: () => void;
 }
@@ -254,6 +321,7 @@ function ItemCard({
   index,
   total,
   table,
+  scope,
   fields,
   titleField,
   itemName,
@@ -262,6 +330,7 @@ function ItemCard({
   reordering,
   onMove,
   onMediaAdded,
+  onValuesChange,
   onSaved,
   onRemoved,
 }: CardProps) {
@@ -272,6 +341,11 @@ function ItemCard({
   const isDraft = item.id === null;
   const dirty = isDraft || JSON.stringify(values) !== JSON.stringify(item.values);
   useTrackDirty(`${table}:${item.key}`, dirty);
+
+  useEffect(() => {
+    onValuesChange(values);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values]);
 
   const heading = String(values[titleField] || '').trim() || `Novo(a) ${itemName}`;
   const fid = (key: string) => `${item.key}-${key}`;
@@ -301,7 +375,11 @@ function ItemCard({
     );
     try {
       const row = isDraft
-        ? await insertItem(table, { ...payload, position } as TablesInsert<typeof table>)
+        ? await insertItem(table, {
+            ...payload,
+            ...(scope && { [scope.column]: scope.value }),
+            position,
+          } as TablesInsert<typeof table>)
         : await updateItem(table, item.id!, payload);
       const saved = pick(row as unknown as Record<string, unknown>, fields);
       setValues(saved);
@@ -396,12 +474,25 @@ function ItemCard({
               />
             );
           }
+          if (f.type === 'rating') {
+            return (
+              <RatingField
+                key={f.key}
+                id={fid(f.key)}
+                label={f.label}
+                help={f.help}
+                value={typeof value === 'number' ? value : 5}
+                onChange={(v) => set(f.key, v)}
+              />
+            );
+          }
           if (f.type === 'media') {
             return (
               <div key={f.key}>
                 <ImagePicker
                   label={f.label}
                   help={f.help}
+                  optional={!f.required}
                   media={typeof value === 'string' ? (media.get(value) ?? null) : null}
                   onChange={(m) => {
                     if (m) {

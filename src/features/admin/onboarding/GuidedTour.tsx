@@ -138,7 +138,9 @@ export function GuidedTour({ onClose, findTimeoutMs = 5000 }: Props) {
       return;
     }
     if (vw < MOBILE_WIDTH) {
-      card.dataset.placement = box.top + box.height / 2 > vh / 2 ? 'sheet-top' : 'sheet-bottom';
+      // Destaques altos rolam até o topo da tela (scrollToTarget): a folha vai para baixo, deixando o início visível.
+      const tall = box.height > vh * 0.45;
+      card.dataset.placement = !tall && box.top + box.height / 2 > vh / 2 ? 'sheet-top' : 'sheet-bottom';
       return;
     }
     const { width: w, height: h } = card.getBoundingClientRect();
@@ -206,23 +208,28 @@ export function GuidedTour({ onClose, findTimeoutMs = 5000 }: Props) {
         className={styles.card}
         data-ready={ready}
       >
-        <div className={styles.top}>
-          <p className={styles.progress}>
-            Passo {index + 1} de {total}
-          </p>
-          <button type="button" className={styles.close} onClick={onClose} aria-label="Fechar tour">
-            <X aria-hidden="true" />
-          </button>
-        </div>
-        <div className={styles.bar} aria-hidden="true">
-          <span style={{ width: `${((index + 1) / total) * 100}%` }} />
+        <div className={styles.head}>
+          <div className={styles.top}>
+            <p className={styles.progress}>
+              Passo {index + 1} de {total}
+            </p>
+            <button type="button" className={styles.close} onClick={onClose} aria-label="Fechar tour">
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          <div className={styles.bar} aria-hidden="true">
+            <span style={{ width: `${((index + 1) / total) * 100}%` }} />
+          </div>
         </div>
 
-        <h2 id="tour-title" ref={titleRef} tabIndex={-1}>
-          {step.title}
-        </h2>
-        <div id="tour-body" className={styles.body}>
-          {step.body}
+        {/* Só o texto rola: o título do passo e os botões ficam sempre visíveis, mesmo no celular. */}
+        <div className={styles.scroll}>
+          <h2 id="tour-title" ref={titleRef} tabIndex={-1}>
+            {step.title}
+          </h2>
+          <div id="tour-body" className={styles.body}>
+            {step.body}
+          </div>
         </div>
 
         <div className={styles.actions}>

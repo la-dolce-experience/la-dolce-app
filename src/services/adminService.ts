@@ -1,9 +1,9 @@
+import type { ListScope, ListTable } from '../lib/preview';
 import { MEDIA_BUCKET, requireSupabase } from '../lib/supabase';
 import type { SectionKey } from '../types/content';
 import type { Tables, TablesInsert, TablesUpdate } from '../types/database';
 
-/** Tabelas de listas ordenáveis editadas no painel. */
-export type ListTable = 'event_types' | 'features' | 'steps' | 'gallery_items' | 'faqs' | 'testimonials';
+export type { ListScope, ListTable };
 export type ListRow<T extends ListTable> = Tables<T>;
 
 export type SettingsRow = Tables<'site_settings'>;
@@ -58,9 +58,12 @@ export async function listSections(): Promise<SectionRow[]> {
 
 // ---------------- Listas ordenáveis ----------------
 
-export async function listItems<T extends ListTable>(table: T): Promise<ListRow<T>[]> {
-  const result = await requireSupabase().from(table).select('*').order('position');
-  return check(result) as ListRow<T>[];
+/** Itens de uma lista, na ordem do site. Com `scope`, só o recorte (ex.: os sabores de flavor_items). */
+export async function listItems<T extends ListTable>(table: T, scope?: ListScope): Promise<ListRow<T>[]> {
+  let query = listTable(table).select('*');
+  if (scope) query = query.eq(scope.column as 'id', scope.value);
+  const result = await query.order('position');
+  return check(result) as unknown as ListRow<T>[];
 }
 
 export async function insertItem<T extends ListTable>(table: T, row: TablesInsert<T>): Promise<ListRow<T>> {
@@ -176,12 +179,14 @@ const SECTION_LABELS: Record<string, string> = {
 /** Onde a imagem é usada no site (para avisar antes de excluir). */
 export async function getMediaUsage(mediaId: string): Promise<MediaUsage[]> {
   const db = requireSupabase();
-  const [sections, settings, gallery] = await Promise.all([
+  const [sections, settings, gallery, flavors, testimonials] = await Promise.all([
     db.from('sections').select('key').eq('image_media_id', mediaId),
     db.from('site_settings').select('logo_media_id, og_media_id').eq('id', 1).maybeSingle(),
     db.from('gallery_items').select('id').eq('media_id', mediaId),
+    db.from('flavor_items').select('title').eq('media_id', mediaId),
+    db.from('testimonials').select('author').eq('media_id', mediaId),
   ]);
-  for (const r of [sections, settings, gallery]) if (r.error) throw r.error;
+  for (const r of [sections, settings, gallery, flavors, testimonials]) if (r.error) throw r.error;
 
   const usage: MediaUsage[] = (sections.data ?? []).map((s) => ({
     label: `Seção "${SECTION_LABELS[s.key] ?? s.key}"`,
@@ -190,6 +195,8 @@ export async function getMediaUsage(mediaId: string): Promise<MediaUsage[]> {
   if (settings.data?.og_media_id === mediaId) usage.push({ label: 'Imagem de compartilhamento (SEO)' });
   const g = gallery.data?.length ?? 0;
   if (g > 0) usage.push({ label: g === 1 ? 'Galeria (1 foto)' : `Galeria (${g} fotos)` });
+  for (const f of flavors.data ?? []) usage.push({ label: `Sabores e apresentação: "${f.title}"` });
+  for (const t of testimonials.data ?? []) usage.push({ label: `Depoimento de ${t.author}` });
   return usage;
 }
 
@@ -267,17 +274,19 @@ export interface ContentBackup {
 /** Todo o conteúdo editável (inclusive itens ocultos), em JSON. Os arquivos de imagem continuam no Storage. */
 export async function exportContent(): Promise<ContentBackup> {
   const sb = requireSupabase();
-  const [settings, sections, eventTypes, features, steps, gallery, faqs, testimonials, media] = await Promise.all([
-    sb.from('site_settings').select('*'),
-    sb.from('sections').select('*').order('key'),
-    sb.from('event_types').select('*').order('position'),
-    sb.from('features').select('*').order('position'),
-    sb.from('steps').select('*').order('position'),
-    sb.from('gallery_items').select('*').order('position'),
-    sb.from('faqs').select('*').order('position'),
-    sb.from('testimonials').select('*').order('position'),
-    sb.from('media').select('*').order('created_at'),
-  ]);
+  const [settings, sections, eventTypes, features, flavors, steps, gallery, faqs, testimonials, media] =
+    await Promise.all([
+      sb.from('site_settings').select('*'),
+      sb.from('sections').select('*').order('key'),
+      sb.from('event_types').select('*').order('position'),
+      sb.from('features').select('*').order('position'),
+      sb.from('flavor_items').select('*').order('kind').order('position'),
+      sb.from('steps').select('*').order('position'),
+      sb.from('gallery_items').select('*').order('position'),
+      sb.from('faqs').select('*').order('position'),
+      sb.from('testimonials').select('*').order('position'),
+      sb.from('media').select('*').order('created_at'),
+    ]);
   return {
     formato: 'la-dolce-backup',
     versao: 1,
@@ -289,6 +298,7 @@ export async function exportContent(): Promise<ContentBackup> {
       sections: check(sections),
       event_types: check(eventTypes),
       features: check(features),
+      flavor_items: check(flavors),
       steps: check(steps),
       gallery_items: check(gallery),
       faqs: check(faqs),

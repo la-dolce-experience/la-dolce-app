@@ -13,6 +13,7 @@ export function ContactPage() {
         breadcrumb="Configurações"
         title="Contato e marca"
         description="WhatsApp usado em todos os botões do site, contatos, redes sociais e logotipo."
+        previewAnchor=""
       />
       <SettingsEditor
         formKey="settings:contact"

@@ -1,9 +1,10 @@
 import { defaultContent } from '../content/defaultContent';
 import { isSupabaseConfigured, MEDIA_BUCKET, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/env';
-import { readPreviewDraft, type PreviewDraft } from '../lib/preview';
+import { readPreviewDraft, type ListTable, type PreviewDraft } from '../lib/preview';
 import type { Tables } from '../types/database';
 import {
   SECTION_KEYS,
+  type FlavorItem,
   type ImageRef,
   type Section,
   type SectionKey,
@@ -15,16 +16,19 @@ export type MediaRow = Tables<'media'>;
 type SectionRow = Tables<'sections'> & { media: MediaRow | null };
 type SettingsRow = Tables<'site_settings'> & { logo: MediaRow | null; og: MediaRow | null };
 type GalleryRow = Tables<'gallery_items'> & { media: MediaRow | null };
+type FlavorRow = Tables<'flavor_items'> & { media: MediaRow | null };
+type TestimonialRow = Tables<'testimonials'> & { media?: MediaRow | null };
 
 export interface ContentRows {
   settings: SettingsRow | null;
   sections: SectionRow[];
   eventTypes: Tables<'event_types'>[];
   features: Tables<'features'>[];
+  flavorItems: FlavorRow[];
   steps: Tables<'steps'>[];
   gallery: GalleryRow[];
   faqs: Tables<'faqs'>[];
-  testimonials: Tables<'testimonials'>[];
+  testimonials: TestimonialRow[];
 }
 
 /** Caminho no bucket -> URL pública. Caminhos absolutos ("/images/...", "https://...") ficam como estão. */
@@ -93,6 +97,20 @@ function mapSection(row: SectionRow): Section {
 
 const byPosition = <T extends { position: number }>(a: T, b: T) => a.position - b.position;
 
+function mapFlavors(rows: FlavorRow[], kind: 'sabor' | 'apresentacao'): FlavorItem[] {
+  return rows
+    .filter((f) => f.kind === kind && f.visible)
+    .sort(byPosition)
+    .map((f) => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      image: f.media ? mediaToImage(f.media, f.alt || f.title) : null,
+    }));
+}
+
+const clampRating = (n: number) => Math.min(5, Math.max(1, Math.round(Number(n) || 5)));
+
 /** Converte as linhas do banco no modelo usado pelos componentes. Função pura (testável). */
 export function mapContent(rows: ContentRows): SiteContent {
   const sectionMap = new Map(rows.sections.map((s) => [s.key, mapSection(s)]));
@@ -111,6 +129,8 @@ export function mapContent(rows: ContentRows): SiteContent {
       .filter((f) => f.visible)
       .sort(byPosition)
       .map((f) => ({ id: f.id, label: f.label })),
+    flavors: mapFlavors(rows.flavorItems, 'sabor'),
+    presentations: mapFlavors(rows.flavorItems, 'apresentacao'),
     steps: rows.steps
       .filter((s) => s.visible)
       .sort(byPosition)
@@ -126,7 +146,14 @@ export function mapContent(rows: ContentRows): SiteContent {
     testimonials: rows.testimonials
       .filter((t) => t.visible && t.authorized)
       .sort(byPosition)
-      .map((t) => ({ id: t.id, author: t.author, context: t.context, quote: t.quote })),
+      .map((t) => ({
+        id: t.id,
+        author: t.author,
+        context: t.context,
+        quote: t.quote,
+        rating: clampRating(t.rating),
+        image: t.media ? mediaToImage(t.media, t.author) : null,
+      })),
   };
 }
 
@@ -143,21 +170,36 @@ async function rest<T>(table: string, query: string): Promise<T> {
 export async function fetchContentRows(): Promise<ContentRows> {
   const ordered = 'select=*&order=position.asc';
 
-  const [settings, sections, eventTypes, features, steps, gallery, faqs, testimonials] = await Promise.all([
-    rest<SettingsRow[]>(
-      'site_settings',
-      `id=eq.1&select=${encodeURIComponent('*,logo:media!site_settings_logo_media_id_fkey(*),og:media!site_settings_og_media_id_fkey(*)')}`,
-    ),
-    rest<SectionRow[]>('sections', `select=${encodeURIComponent('*,media(*)')}`),
-    rest<Tables<'event_types'>[]>('event_types', ordered),
-    rest<Tables<'features'>[]>('features', ordered),
-    rest<Tables<'steps'>[]>('steps', ordered),
-    rest<GalleryRow[]>('gallery_items', `select=${encodeURIComponent('*,media(*)')}&order=position.asc`),
-    rest<Tables<'faqs'>[]>('faqs', ordered),
-    rest<Tables<'testimonials'>[]>('testimonials', ordered),
-  ]);
+  const withMedia = `select=${encodeURIComponent('*,media(*)')}&order=position.asc`;
 
-  return { settings: settings[0] ?? null, sections, eventTypes, features, steps, gallery, faqs, testimonials };
+  const [settings, sections, eventTypes, features, flavorItems, steps, gallery, faqs, testimonials] = await Promise.all(
+    [
+      rest<SettingsRow[]>(
+        'site_settings',
+        `id=eq.1&select=${encodeURIComponent('*,logo:media!site_settings_logo_media_id_fkey(*),og:media!site_settings_og_media_id_fkey(*)')}`,
+      ),
+      rest<SectionRow[]>('sections', `select=${encodeURIComponent('*,media(*)')}`),
+      rest<Tables<'event_types'>[]>('event_types', ordered),
+      rest<Tables<'features'>[]>('features', ordered),
+      rest<FlavorRow[]>('flavor_items', withMedia),
+      rest<Tables<'steps'>[]>('steps', ordered),
+      rest<GalleryRow[]>('gallery_items', withMedia),
+      rest<Tables<'faqs'>[]>('faqs', ordered),
+      rest<TestimonialRow[]>('testimonials', withMedia),
+    ],
+  );
+
+  return {
+    settings: settings[0] ?? null,
+    sections,
+    eventTypes,
+    features,
+    flavorItems,
+    steps,
+    gallery,
+    faqs,
+    testimonials,
+  };
 }
 
 /** Busca todo o conteúdo público. Retorna null se o Supabase não estiver configurado. */
@@ -180,8 +222,27 @@ export function applyPreviewDraft(rows: ContentRows, draft: PreviewDraft | null)
     ...(logo !== undefined && { logo }),
     ...(og !== undefined && { og }),
   };
-  return { ...rows, sections, settings };
+  const next: ContentRows = { ...rows, sections, settings };
+  for (const list of Object.values(draft.lists ?? {})) {
+    const key = ROWS_KEY[list.table];
+    if (!key) continue;
+    const { column, value } = list.scope ?? {};
+    // Mantém as linhas publicadas fora do recorte (ex.: as apresentações, quando o rascunho é dos sabores).
+    const kept = column ? (next[key] as Record<string, unknown>[]).filter((r) => r[column] !== value) : [];
+    (next as unknown as Record<string, unknown[]>)[key] = [...kept, ...list.rows];
+  }
+  return next;
 }
+
+const ROWS_KEY: Record<ListTable, Exclude<keyof ContentRows, 'settings' | 'sections'>> = {
+  event_types: 'eventTypes',
+  features: 'features',
+  flavor_items: 'flavorItems',
+  steps: 'steps',
+  gallery_items: 'gallery',
+  faqs: 'faqs',
+  testimonials: 'testimonials',
+};
 
 let publishedRows: Promise<ContentRows> | null = null;
 
