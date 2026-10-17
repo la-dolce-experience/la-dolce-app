@@ -1,8 +1,10 @@
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Lightbox } from '../../components/Lightbox/Lightbox';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import type { Testimonial } from '../../types/content';
 import styles from './Sections.module.css';
 
 export function Stars({ rating }: { rating: number }) {
@@ -12,6 +14,62 @@ export function Stars({ rating }: { rating: number }) {
         <Star key={n} aria-hidden="true" className={n <= rating ? styles.starOn : undefined} />
       ))}
     </p>
+  );
+}
+
+/** Acima deste número, mostra as 2 primeiras fotos e a terceira desfocada com "+N" (como na galeria). */
+const MAX_THUMBS = 3;
+
+/** Fotos do evento de um depoimento: miniaturas que abrem em tela cheia, em carrossel. */
+function EventPhotos({ testimonial }: { testimonial: Testimonial }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const { photos, author } = testimonial;
+  if (photos.length === 0) return null;
+
+  const collapsed = photos.length > MAX_THUMBS;
+  const hidden = photos.length - (MAX_THUMBS - 1);
+
+  return (
+    <>
+      <ul className={styles.eventPhotos} aria-label={`Fotos do evento de ${author}`}>
+        {photos.slice(0, MAX_THUMBS).map((photo, index) => {
+          const more = collapsed && index === MAX_THUMBS - 1;
+          return (
+            <li key={`${photo.mediaId ?? photo.src}-${index}`}>
+              <button
+                type="button"
+                className={`${styles.eventPhoto} ${more ? styles.galleryMore : ''}`}
+                onClick={() => setOpen(index)}
+                aria-haspopup="dialog"
+                aria-label={
+                  more
+                    ? `Ver todas as ${photos.length} fotos do evento de ${author}`
+                    : `Ampliar foto ${index + 1} de ${photos.length} do evento de ${author}`
+                }
+              >
+                <ResponsiveImage image={photo} sizes="120px" alt="" />
+                {more && (
+                  <span className={styles.eventPhotoMore} aria-hidden="true">
+                    +{hidden}
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {open !== null && (
+        <Lightbox
+          items={photos.map((image, i) => ({
+            id: `${testimonial.id}-${i}`,
+            image,
+            caption: [author, testimonial.context].filter(Boolean).join(' · '),
+          }))}
+          start={open}
+          onClose={() => setOpen(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -76,6 +134,7 @@ export function TestimonialsSection() {
                 <figure className={styles.testimonial}>
                   <Stars rating={t.rating} />
                   <blockquote className="prewrap">“{t.quote}”</blockquote>
+                  <EventPhotos testimonial={t} />
                   <figcaption>
                     {t.image && <ResponsiveImage image={t.image} sizes="56px" className={styles.avatar} alt="" />}
                     <span>

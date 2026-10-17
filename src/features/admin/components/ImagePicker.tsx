@@ -1,4 +1,4 @@
-import { ImageOff, Images, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ImageOff, ImagePlus, Images, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/Button/Button';
 import { listMedia, type MediaRow } from '../../../services/adminService';
@@ -51,6 +51,94 @@ export function ImagePicker({ label, help, media, onChange, optional = false }: 
           onClose={() => setOpen(false)}
           onSelect={(m) => {
             onChange(m);
+            setOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ListPickerProps {
+  label: string;
+  help?: string;
+  /** Imagens escolhidas, na ordem exibida no site. */
+  items: MediaRow[];
+  max: number;
+  onChange: (items: MediaRow[]) => void;
+}
+
+/** Várias imagens em ordem (ex.: fotos do evento de um depoimento): adicionar, reordenar e remover. */
+export function ImageListPicker({ label, help, items, max, onChange }: ListPickerProps) {
+  const [open, setOpen] = useState(false);
+  const full = items.length >= max;
+
+  function move(index: number, delta: -1 | 1) {
+    const next = [...items];
+    [next[index], next[index + delta]] = [next[index + delta], next[index]];
+    onChange(next);
+  }
+
+  return (
+    <div className={styles.picker}>
+      <p className={styles.pickerLabel}>
+        {label}{' '}
+        <span className={styles.count}>
+          ({items.length} de {max})
+        </span>
+      </p>
+      {help && <p className={styles.rules}>{help}</p>}
+      {items.length > 0 && (
+        <ol className={styles.photoList}>
+          {items.map((m, i) => (
+            <li key={m.id}>
+              <img src={mediaThumb(m)} alt={m.alt} />
+              <div className={styles.photoTools}>
+                <button
+                  type="button"
+                  onClick={() => move(i, -1)}
+                  disabled={i === 0}
+                  aria-label={`Mover a foto ${i + 1} para a esquerda`}
+                >
+                  <ArrowLeft aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(i, 1)}
+                  disabled={i === items.length - 1}
+                  aria-label={`Mover a foto ${i + 1} para a direita`}
+                >
+                  <ArrowRight aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(items.filter((x) => x.id !== m.id))}
+                  aria-label={`Remover a foto ${i + 1}`}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className={styles.actions}>
+        <Button
+          variant="outline"
+          size="sm"
+          icon={<ImagePlus aria-hidden="true" />}
+          onClick={() => setOpen(true)}
+          disabled={full}
+        >
+          {full ? `Limite de ${max} fotos` : 'Adicionar foto'}
+        </Button>
+      </div>
+      {open && (
+        <MediaLibraryDialog
+          title={label}
+          onClose={() => setOpen(false)}
+          onSelect={(m) => {
+            if (!items.some((x) => x.id === m.id)) onChange([...items, m]);
             setOpen(false);
           }}
         />

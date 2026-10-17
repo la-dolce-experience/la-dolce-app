@@ -219,3 +219,59 @@
     grid-template-columns: 220px 1fr;
   }
 }
+
+/* ---------- Várias fotos (depoimentos) ---------- */
+.count {
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.photoList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photoList li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.photoList img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: #f2eef0;
+}
+
+.photoTools {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.photoTools button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.photoTools button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.photoTools svg {
+  width: 16px;
+  height: 16px;
+}

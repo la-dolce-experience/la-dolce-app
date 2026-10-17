@@ -111,8 +111,10 @@ export interface Testimonial {
   quote: string;
   /** Nota de 1 a 5 estrelas. */
   rating: number;
-  /** Foto de quem deu o depoimento ou do evento (opcional). */
+  /** Foto de perfil de quem deu o depoimento (opcional). */
   image: ImageRef | null;
+  /** Fotos do evento (até 5), na ordem escolhida no painel. */
+  photos: ImageRef[];
 }
 
 export interface SiteContent {

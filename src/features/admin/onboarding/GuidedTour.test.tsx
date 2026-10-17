@@ -28,6 +28,7 @@ const expectFocusOn = (i: number) =>
   waitFor(() => expect(screen.getByRole('heading', { level: 2, name: TOUR_STEPS[i].title })).toHaveFocus());
 
 describe('Tour guiado', () => {
+  // Percorre todos os passos, cada um esperando a tela: leva mais que os 5 s padrão em máquinas lentas (CI).
   it('abre a tela de cada passo e conclui no último', async () => {
     const user = userEvent.setup();
     const onClose = renderTour();
@@ -44,7 +45,7 @@ describe('Tour guiado', () => {
     expect(onClose).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Concluir' }));
     expect(onClose).toHaveBeenCalledTimes(1);
-  });
+  }, 20_000);
 
   it('passa por todas as áreas do painel', () => {
     const routes = new Set(TOUR_STEPS.map((s) => s.route));

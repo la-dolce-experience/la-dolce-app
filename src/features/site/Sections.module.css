@@ -417,12 +417,58 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
+/* Fotos do evento no depoimento: até 3 miniaturas; com mais, a terceira mostra "+N". */
+.eventPhotos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eventPhoto {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--color-cream-soft, #fff4f7);
+  cursor: zoom-in;
+}
+
+.eventPhoto img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  transition: transform 0.4s var(--ease);
+}
+
+.eventPhoto:focus-visible {
+  outline: 3px solid var(--color-brand-deep);
+  outline-offset: 2px;
+}
+
+.eventPhotoMore {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 900;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
 .testimonial blockquote {
+  flex: 1;
   margin: 0;
   font-size: var(--fs-lg);
 }

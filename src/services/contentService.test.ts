@@ -32,6 +32,7 @@ const testimonial = {
   context: '',
   quote: 'x',
   media_id: null,
+  photo_media_ids: [] as string[],
   rating: 5,
   visible: true,
 };
@@ -83,6 +84,28 @@ describe('mapContent', () => {
     expect(content.testimonials.map((t) => t.rating)).toEqual([5, 3]);
     expect(content.testimonials[0].image).toBeNull();
     expect(content.testimonials[1].image?.alt).toBe('Bia');
+  });
+
+  it('usa as fotos do evento na ordem escolhida, com texto alternativo', () => {
+    const semAlt = { ...media('m4', 'b'), alt: '' };
+    const content = mapContent({
+      ...emptyRows,
+      testimonials: [
+        {
+          ...testimonial,
+          id: 'a',
+          author: 'Ana',
+          authorized: true,
+          position: 0,
+          photo_media_ids: ['m3', 'm4'],
+          photos: [media('m3', 'a'), semAlt],
+        },
+        { ...testimonial, id: 'b', author: 'Bia', authorized: true, position: 1 },
+      ],
+    });
+    expect(content.testimonials[0].photos.map((p) => p.mediaId)).toEqual(['m3', 'm4']);
+    expect(content.testimonials[0].photos[1].alt).toBe('Foto do evento de Ana');
+    expect(content.testimonials[1].photos).toEqual([]);
   });
 
   it('usa o conteúdo padrão para o que não veio do banco', () => {

@@ -184,7 +184,7 @@ export async function getMediaUsage(mediaId: string): Promise<MediaUsage[]> {
     db.from('site_settings').select('logo_media_id, og_media_id').eq('id', 1).maybeSingle(),
     db.from('gallery_items').select('id').eq('media_id', mediaId),
     db.from('flavor_items').select('title').eq('media_id', mediaId),
-    db.from('testimonials').select('author').eq('media_id', mediaId),
+    db.from('testimonials').select('author').or(`media_id.eq.${mediaId},photo_media_ids.cs.{${mediaId}}`),
   ]);
   for (const r of [sections, settings, gallery, flavors, testimonials]) if (r.error) throw r.error;
 

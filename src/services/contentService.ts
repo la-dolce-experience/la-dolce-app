@@ -17,7 +17,8 @@ type SectionRow = Tables<'sections'> & { media: MediaRow | null };
 type SettingsRow = Tables<'site_settings'> & { logo: MediaRow | null; og: MediaRow | null };
 type GalleryRow = Tables<'gallery_items'> & { media: MediaRow | null };
 type FlavorRow = Tables<'flavor_items'> & { media: MediaRow | null };
-type TestimonialRow = Tables<'testimonials'> & { media?: MediaRow | null };
+/** `photos`: as imagens de photo_media_ids, na mesma ordem (o banco não as embute: é um array). */
+type TestimonialRow = Tables<'testimonials'> & { media?: MediaRow | null; photos?: MediaRow[] };
 
 export interface ContentRows {
   settings: SettingsRow | null;
@@ -153,6 +154,7 @@ export function mapContent(rows: ContentRows): SiteContent {
         quote: t.quote,
         rating: clampRating(t.rating),
         image: t.media ? mediaToImage(t.media, t.author) : null,
+        photos: (t.photos ?? []).map((m) => mediaToImage(m, m.alt || `Foto do evento de ${t.author}`)),
       })),
   };
 }
@@ -198,8 +200,19 @@ export async function fetchContentRows(): Promise<ContentRows> {
     steps,
     gallery,
     faqs,
-    testimonials,
+    testimonials: await withPhotos(testimonials),
   };
+}
+
+/** Busca de uma vez as fotos do evento de todos os depoimentos e as anexa a cada um, na ordem escolhida. */
+async function withPhotos(rows: TestimonialRow[]): Promise<TestimonialRow[]> {
+  const ids = [...new Set(rows.flatMap((t) => t.photo_media_ids ?? []))];
+  if (ids.length === 0) return rows;
+  const media = new Map((await rest<MediaRow[]>('media', `id=in.(${ids.join(',')})`)).map((m) => [m.id, m] as const));
+  return rows.map((t) => ({
+    ...t,
+    photos: (t.photo_media_ids ?? []).map((id) => media.get(id)).filter((m): m is MediaRow => !!m),
+  }));
 }
 
 /** Busca todo o conteúdo público. Retorna null se o Supabase não estiver configurado. */
