@@ -1,6 +1,6 @@
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { useSiteContent } from '../../hooks/useSiteContent';
-import type { FlavorItem } from '../../types/content';
+import type { FlavorItem, ImageRef } from '../../types/content';
 import { SplitSection } from './SplitSection';
 import styles from './Sections.module.css';
 
@@ -23,6 +23,17 @@ export function FlavorsSection() {
   );
 }
 
+/**
+ * A foto fica num quadrado com "contain": uma foto em pé (copinho, casquinha) ocupa só parte da largura do
+ * cartão. Escala a largura informada ao navegador pela proporção, para o celular não baixar a versão grande.
+ */
+function cardSizes(image: ImageRef): string {
+  const ratio = image.width && image.height ? Math.min(1, image.width / image.height) : 1;
+  if (ratio === 1) return '(min-width: 960px) 260px, (min-width: 640px) 33vw, 50vw';
+  const r = ratio.toFixed(3);
+  return `(min-width: 960px) ${Math.round(260 * ratio)}px, (min-width: 640px) calc(33vw * ${r}), calc(50vw * ${r})`;
+}
+
 function FlavorList({ id, title, items }: { id: string; title: string; items: FlavorItem[] }) {
   if (items.length === 0) return null;
   return (
@@ -33,9 +44,7 @@ function FlavorList({ id, title, items }: { id: string; title: string; items: Fl
       <ul className={styles.flavorGrid}>
         {items.map((item) => (
           <li key={item.id} className={`${styles.flavorCard} ${item.image ? styles.flavorCardPhoto : ''}`}>
-            {item.image && (
-              <ResponsiveImage image={item.image} sizes="(min-width: 960px) 260px, (min-width: 640px) 33vw, 50vw" />
-            )}
+            {item.image && <ResponsiveImage image={item.image} sizes={cardSizes(item.image)} />}
             <div>
               <h4>{item.title}</h4>
               {item.description && <p className="prewrap">{item.description}</p>}
