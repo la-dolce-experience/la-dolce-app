@@ -118,7 +118,13 @@ export const defaultContent: SiteContent = {
   settings: {
     businessName: 'La Dolce Experience',
     footerTagline: 'Sorveteria premium para eventos sociais e corporativos.',
-    logo: { src: '/images/logo.webp', alt: 'La Dolce Experience', width: 480, height: 303 },
+    logo: {
+      src: '/images/logo.webp',
+      srcSet: '/images/logo-280.webp 280w, /images/logo.webp 480w',
+      alt: 'La Dolce Experience',
+      width: 480,
+      height: 303,
+    },
     whatsappNumber: '5511920102743',
     whatsappGreeting: 'Olá! Vim pelo site e quero tirar algumas dúvidas.',
     phone: '',

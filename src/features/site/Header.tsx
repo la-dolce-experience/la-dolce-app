@@ -36,6 +36,8 @@ export function Header() {
         <a className={styles.brand} href="#inicio" aria-label={`${settings.businessName} — início`}>
           <img
             src={settings.logo.src}
+            srcSet={settings.logo.srcSet}
+            sizes={settings.logo.srcSet ? '(min-width: 768px) 116px, 92px' : undefined}
             alt=""
             width={settings.logo.width}
             height={settings.logo.height}

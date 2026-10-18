@@ -22,6 +22,8 @@ export function Footer() {
         <div className={styles.brand}>
           <img
             src={settings.logo.src}
+            srcSet={settings.logo.srcSet}
+            sizes={settings.logo.srcSet ? '132px' : undefined}
             alt={settings.businessName}
             width={settings.logo.width}
             height={settings.logo.height}

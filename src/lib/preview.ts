@@ -55,11 +55,14 @@ export const PREVIEW_PARAM = 'previa';
 export const EMBED_PARAM = 'painel';
 const WINDOW_NAME = 'la-dolce-previa';
 
-export function isPreviewMode(search = window.location.search): boolean {
+/** Parâmetros da URL atual; vazio na pré-renderização do build (sem window). */
+const currentSearch = () => (typeof window === 'undefined' ? '' : window.location.search);
+
+export function isPreviewMode(search = currentSearch()): boolean {
   return new URLSearchParams(search).has(PREVIEW_PARAM);
 }
 
-export function isEmbeddedPreview(search = window.location.search): boolean {
+export function isEmbeddedPreview(search = currentSearch()): boolean {
   return isPreviewMode(search) && new URLSearchParams(search).has(EMBED_PARAM);
 }
 
