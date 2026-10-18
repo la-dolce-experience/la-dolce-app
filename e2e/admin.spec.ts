@@ -120,7 +120,7 @@ test.describe('Tour guiado e ajuda', () => {
     const dialog = page.getByRole('dialog');
     const next = page.getByRole('button', { name: 'Próximo' });
     await expect(dialog).toHaveAccessibleName('Boas-vindas ao painel');
-    await expect(dialog).toContainText('Passo 1 de 15');
+    await expect(dialog).toContainText('Passo 1 de 21');
     // Durante o tour, o restante do painel fica bloqueado para teclado e mouse.
     await expect(page.locator('#admin-main')).toHaveAttribute('inert', '');
     await expect(page.locator('#admin-sidebar')).toHaveAttribute('inert', '');
@@ -136,7 +136,7 @@ test.describe('Tour guiado e ajuda', () => {
     await expectSpotlightOn(page, '[data-tour="checklist"]');
 
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Página inicial, seção por seção');
+    await expect(dialog).toHaveAccessibleName('O site, parte por parte');
     await expectSpotlightOn(page, '[data-tour="nav-sections"]');
 
     await next.click();
@@ -145,7 +145,11 @@ test.describe('Tour guiado e ajuda', () => {
     await expectSpotlightOn(page, '[data-tour="image-picker"]');
 
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Pré-visualizar e salvar');
+    await expect(dialog).toHaveAccessibleName('Pré-visualização ao vivo');
+    await expectSpotlightOn(page, '[data-tour="preview-open"]');
+
+    await next.click();
+    await expect(dialog).toHaveAccessibleName('Salvar ou descartar');
     await expectSpotlightOn(page, '[data-tour="save-bar"]');
 
     await next.click();
@@ -166,6 +170,11 @@ test.describe('Tour guiado e ajuda', () => {
 
     for (const [url, name, selector] of [
       ['/admin/secoes/events', 'Ordenar, ocultar e excluir', '[data-tour="list-item"]'],
+      ['/admin/secoes/flavors', 'Sabores e apresentações', '[data-tour="list-sabor"]'],
+      ['/admin/secoes/gallery', 'Galeria de fotos', '[data-tour="list-gallery_items"]'],
+      ['/admin/secoes/testimonials', 'Depoimentos', '[data-tour="list-testimonials"]'],
+      ['/admin/secoes/quote', 'Formulário de orçamento', '[data-tour="section-form"]'],
+      ['/admin/secoes/location', 'Atendimento e localização', '[data-tour="location"]'],
       ['/admin/imagens', 'Biblioteca de imagens', '[data-tour="media-upload"]'],
       ['/admin/contato', 'WhatsApp e contatos', '[data-tour="whatsapp"]'],
       ['/admin/seo', 'Google e compartilhamento', '[data-tour="seo"]'],
@@ -179,7 +188,7 @@ test.describe('Tour guiado e ajuda', () => {
       await expectSpotlightOn(page, selector);
     }
 
-    await expect(dialog).toContainText('Passo 15 de 15');
+    await expect(dialog).toContainText('Passo 21 de 21');
     const saved = waitForGuideSaved(page);
     await page.getByRole('button', { name: 'Concluir' }).click();
     await saved;
@@ -216,13 +225,14 @@ test.describe('Tour guiado e ajuda', () => {
     await next.click();
     await next.click();
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Página inicial, seção por seção');
+    await expect(dialog).toHaveAccessibleName('O site, parte por parte');
     await expectSpotlightOn(page, '[data-tour="menu-button"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
 
     await next.click();
     await next.click();
-    await expect(dialog).toHaveAccessibleName('Pré-visualizar e salvar');
+    await next.click();
+    await expect(dialog).toHaveAccessibleName('Salvar ou descartar');
     await expectSpotlightOn(page, '[data-tour="save-bar"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
     await page.keyboard.press('Escape');
@@ -539,11 +549,11 @@ test.describe('Pré-visualização', () => {
     const original = await title.inputValue();
 
     await title.fill('Prévia e2e: primeira versão');
-    const popupPromise = page.waitForEvent('popup');
-    await page.getByRole('button', { name: 'Pré-visualizar' }).click();
-    const preview = await popupPromise;
-    await expect(preview).toHaveURL(/\?previa=1/);
-    await expect(preview.getByRole('status').filter({ hasText: 'Pré-visualização.' })).toBeVisible();
+    // O botão do cabeçalho e o da barra de salvar abrem a mesma pré-visualização, ao lado do formulário.
+    await page.getByRole('button', { name: 'Pré-visualizar' }).first().click();
+    await expect(page.getByRole('complementary', { name: 'Pré-visualização' })).toBeVisible();
+    const preview = page.frameLocator('iframe[title="Pré-visualização do site"]');
+    await expect(page.locator('iframe[title="Pré-visualização do site"]')).toHaveAttribute('src', /\?previa=1/);
     await expect(preview.getByRole('heading', { level: 1 })).toHaveText('Prévia e2e: primeira versão');
 
     // Ao vivo: a aba da prévia acompanha o que é digitado no painel.

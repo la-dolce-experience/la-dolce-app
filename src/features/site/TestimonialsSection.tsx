@@ -78,7 +78,7 @@ export function TestimonialsSection() {
   const { content } = useSiteContent();
   const section = content.sections.testimonials;
   const items = content.testimonials;
-  const trackRef = useRef<HTMLUListElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ active: 0, canPrev: false, canNext: false });
 
   const update = useCallback(() => {
@@ -128,9 +128,10 @@ export function TestimonialsSection() {
           body={section.body}
         />
         <div className={styles.carousel} role="region" aria-roledescription="carrossel" aria-label="Depoimentos">
-          <ul ref={trackRef} className={styles.testimonials} onScroll={update}>
+          {/* Cada slide é um grupo, como no padrão de carrossel acessível; por isso div, e não lista. */}
+          <div ref={trackRef} className={styles.testimonials} onScroll={update}>
             {items.map((t, i) => (
-              <li key={t.id} role="group" aria-roledescription="depoimento" aria-label={`${i + 1} de ${items.length}`}>
+              <div key={t.id} role="group" aria-roledescription="depoimento" aria-label={`${i + 1} de ${items.length}`}>
                 <figure className={styles.testimonial}>
                   <Stars rating={t.rating} />
                   <blockquote className="prewrap">“{t.quote}”</blockquote>
@@ -143,9 +144,9 @@ export function TestimonialsSection() {
                     </span>
                   </figcaption>
                 </figure>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
           {scrollable && (
             <div className={styles.carouselControls}>
               <button

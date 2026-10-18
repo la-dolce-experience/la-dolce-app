@@ -148,7 +148,9 @@ test.describe('Robustez, SEO e segurança', () => {
 
   test('headers de segurança presentes', async ({ request }) => {
     const res = await request.get('/');
-    expect(res.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+    // Só o próprio painel pode embutir o site (pré-visualização ao vivo).
+    expect(res.headers()['content-security-policy']).toContain("frame-ancestors 'self'");
+    expect(res.headers()['x-frame-options']).toBe('SAMEORIGIN');
     expect(res.headers()['x-content-type-options']).toBe('nosniff');
   });
 });

@@ -172,6 +172,11 @@
   letter-spacing: -0.03em;
 }
 
+/* O título recebe o foco ao trocar de tela só para o leitor de tela anunciá-la; não é um controle. */
+.pageHeader h1:focus {
+  outline: none;
+}
+
 .pageHeader p {
   color: var(--color-muted);
   margin-top: var(--space-2);
