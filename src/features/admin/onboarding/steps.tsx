@@ -229,8 +229,9 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'Google e compartilhamento',
     body: (
       <p>
-        O título e a descrição que aparecem no Google e a imagem mostrada quando alguém envia o link do site. Depois de
-        mudar, use <strong>Atualizar prévia do link</strong>, no fim da página.
+        O título e a descrição que aparecem no Google e a imagem mostrada quando alguém envia o link do site. O site é
+        republicado sozinho alguns minutos depois de salvar; para atualizar na hora, use{' '}
+        <strong>Atualizar prévia do link</strong>, no fim da página.
       </p>
     ),
   },
