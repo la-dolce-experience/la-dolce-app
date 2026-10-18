@@ -597,7 +597,7 @@ test.describe('Atualizar prévia do link', () => {
 
     await mockFunction(page, 503, { error: 'nao_configurado' });
     await button.click();
-    await expect(page.getByText('A atualização automática ainda não foi configurada.', { exact: false })).toBeVisible();
+    await expect(page.getByText('A publicação automática ainda não foi configurada.', { exact: false })).toBeVisible();
 
     await mockFunction(page, 429, { error: 'aguarde', retry_after_seconds: 240 });
     await button.click();

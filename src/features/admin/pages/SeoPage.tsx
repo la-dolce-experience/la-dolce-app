@@ -71,8 +71,9 @@ export function SeoPage() {
               <div className={a.notice}>
                 <Info aria-hidden="true" />
                 <p>
-                  Depois de salvar, use <strong>Atualizar a prévia do link</strong>, logo abaixo, para o WhatsApp e as
-                  redes sociais mostrarem o novo título, descrição e imagem.
+                  Depois de salvar, o site é republicado sozinho em cerca de 2 minutos, e o WhatsApp e as redes sociais
+                  passam a mostrar o novo título, descrição e imagem. Para atualizar na hora, use{' '}
+                  <strong>Atualizar a prévia do link</strong>, logo abaixo.
                 </p>
               </div>
             </section>
