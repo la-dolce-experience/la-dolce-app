@@ -1,7 +1,9 @@
 import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { App } from './App';
+import { INITIAL_CONTENT_ID } from './hooks/useSiteContent';
 import { initMonitoring, reportError } from './lib/monitoring';
+import { isPreviewMode } from './lib/preview';
 import './styles/global.css';
 
 initMonitoring();
@@ -10,8 +12,20 @@ initMonitoring();
 window.addEventListener('error', (e) => e.error && reportError(e.error, { origem: 'window.error' }));
 window.addEventListener('unhandledrejection', (e) => reportError(e.reason, { origem: 'unhandledrejection' }));
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root')!;
+const app = (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
+
+// Página inicial pré-renderizada no build: o React assume o HTML que já está na tela.
+// Na pré-visualização o conteúdo é o rascunho do painel, diferente do HTML: monta do zero.
+if (document.getElementById(INITIAL_CONTENT_ID) && window.location.pathname === '/' && !isPreviewMode()) {
+  hydrateRoot(container, app, {
+    onRecoverableError: (error) => reportError(error, { origem: 'hidratacao' }),
+  });
+} else {
+  container.replaceChildren();
+  createRoot(container).render(app);
+}

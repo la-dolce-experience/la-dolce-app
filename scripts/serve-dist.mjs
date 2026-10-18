@@ -57,7 +57,7 @@ createServer(async (req, res) => {
   try {
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
   } catch {
-    file = path.join(root, 'index.html'); // rewrite de SPA
+    file = path.join(root, 'app.html'); // rewrite de SPA (a casca vazia; index.html é a página inicial pré-renderizada)
   }
   try {
     const body = await readFile(file);

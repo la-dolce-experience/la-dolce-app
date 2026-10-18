@@ -47,7 +47,8 @@ export function seoPlugin(options: Options): Plugin {
   let seo: SeoData | null = null;
   return {
     name: 'la-dolce-seo',
-    apply: 'build',
+    // Só no build do navegador; o build de pré-renderização (--ssr) não gera HTML.
+    apply: (config, { command }) => command === 'build' && !config.build?.ssr,
     async buildStart() {
       try {
         seo = await fetchSeo(options);
@@ -57,6 +58,15 @@ export function seoPlugin(options: Options): Plugin {
       }
     },
     transformIndexHtml(html) {
+      // Abre a conexão com o banco enquanto o JavaScript ainda baixa (o conteúdo vem de lá).
+      if (options.supabaseUrl) {
+        const origin = escapeHtml(new URL(options.supabaseUrl).origin);
+        html = html.replace(
+          '</title>',
+          `</title>
+    <link rel="preconnect" href="${origin}" crossorigin />`,
+        );
+      }
       if (!seo) return html;
       const t = escapeHtml(seo.title);
       const d = escapeHtml(seo.description);

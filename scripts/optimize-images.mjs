@@ -45,6 +45,8 @@ for (const { file, name } of photos) {
 const logoBuf = await (await transparentLogo()).png().toBuffer();
 await sharp(logoBuf).resize({ width: 480 }).png({ compressionLevel: 9 }).toFile(path.join(OUT, 'logo.png'));
 await sharp(logoBuf).resize({ width: 480 }).webp({ quality: 90 }).toFile(path.join(OUT, 'logo.webp'));
+// Versão para o cabeçalho e o rodapé (exibido com 92 a 132px): até 2x sem baixar o arquivo de 480px.
+await sharp(logoBuf).resize({ width: 280 }).webp({ quality: 90 }).toFile(path.join(OUT, 'logo-280.webp'));
 
 // Favicons a partir do logotipo original (fundo rosa, recortado ao centro).
 const square = sharp(path.join(SRC, 'logo-fundo-rosa.png')).resize(512, 512, { fit: 'cover' });

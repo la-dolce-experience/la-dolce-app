@@ -120,6 +120,34 @@ test.describe('Robustez, SEO e segurança', () => {
     await expect(page.getByRole('link', { name: /Conversar pelo WhatsApp/ })).toBeVisible();
   });
 
+  test('a página inicial chega pronta no HTML e o navegador a assume sem divergências', async ({ browser, page }) => {
+    // Sem JavaScript (como Bing, buscadores de IA e a primeira pintura): textos e dados estruturados já estão lá.
+    const noJs = await browser.newContext({ javaScriptEnabled: false });
+    const raw = await noJs.newPage();
+    await raw.goto('/');
+    await expect(raw.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(raw.locator('#orcamento')).toBeAttached();
+    await expect(raw.locator('script[type="application/ld+json"]')).toBeAttached();
+    await noJs.close();
+
+    const errors: string[] = [];
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    // Interativo depois da hidratação: a foto da galeria abre em tela cheia (só funciona com o React no controle).
+    await page.locator('#galeria button').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+    expect(errors).toEqual([]);
+  });
+
+  test('o painel e as demais rotas recebem a casca vazia, sem a página inicial', async ({ request }) => {
+    const html = await (await request.get('/admin')).text();
+    expect(html).toContain('<div id="root"></div>');
+    expect(html).not.toContain('conteudo-inicial');
+  });
+
   test('carrega o conteúdo do banco sem violar a CSP', async ({ page }) => {
     const cspErrors = collectCspErrors(page);
     const response = page.waitForResponse((r) => r.url().includes('/rest/v1/sections') && r.status() === 200);
