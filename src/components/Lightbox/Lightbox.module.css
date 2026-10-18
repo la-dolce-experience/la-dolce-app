@@ -147,6 +147,15 @@
   flex: none;
 }
 
+/* Centraliza as miniaturas sem cortar o início quando elas passam da largura da tela. */
+.thumbs li:first-child {
+  margin-left: auto;
+}
+
+.thumbs li:last-child {
+  margin-right: auto;
+}
+
 .thumbs button {
   display: block;
   width: 64px;

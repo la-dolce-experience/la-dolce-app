@@ -286,12 +286,19 @@
 }
 
 /* ---------- Galeria ---------- */
+/* Celular: a primeira foto em largura total e as outras duas lado a lado. */
 .gallery {
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
   margin: var(--space-10) 0 0;
   padding: 0;
   list-style: none;
+}
+
+.gallery > :first-child,
+.gallery > :nth-child(2):last-child {
+  grid-column: 1 / -1;
 }
 
 .galleryItem {
@@ -345,6 +352,28 @@
 /* Terceira foto desfocada com "+N": abre todas as fotos. */
 .galleryMore {
   cursor: pointer;
+}
+
+@media (max-width: 639px) {
+  .galleryItem img {
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 1;
+  }
+
+  .gallery > :first-child img,
+  .gallery > :nth-child(2):last-child img {
+    aspect-ratio: 4 / 3;
+  }
+
+  .moreLabel {
+    font-size: 2.25rem;
+  }
+
+  /* Nas fotos pequenas a legenda cobriria a imagem; ela continua visível em tela cheia. */
+  .gallery > :not(:first-child) .galleryCaption {
+    display: none;
+  }
 }
 
 .galleryMore img {
@@ -404,7 +433,7 @@
   display: none;
 }
 
-.testimonials > li {
+.testimonials > * {
   scroll-snap-align: start;
   min-width: 0;
 }
@@ -700,9 +729,12 @@
 }
 
 @media (min-width: 640px) {
-  .features,
-  .gallery {
+  .features {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gallery {
+    gap: var(--space-4);
   }
 
   .testimonials {
@@ -711,10 +743,6 @@
 
   .flavorGrid {
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  }
-
-  .gallery > :first-child {
-    grid-column: 1 / -1;
   }
 }
 
@@ -754,6 +782,11 @@
   }
 
   .gallery > :first-child {
+    grid-column: auto;
+    grid-row: span 2;
+  }
+
+  .gallery > :nth-child(2):last-child {
     grid-column: auto;
     grid-row: span 2;
   }
