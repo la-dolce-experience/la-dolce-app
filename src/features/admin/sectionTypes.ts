@@ -177,7 +177,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
           label: 'Opção no formulário (opcional)',
           type: 'text',
           maxLength: 60,
-          help: 'Como aparece no campo "Assunto" do formulário. Em branco, o cartão não vira opção.',
+          help: 'Como aparece no campo "Tipo de evento" do formulário (ex.: "Evento corporativo"). Em branco, o cartão não vira opção.',
         },
         visibleField,
       ],
@@ -370,11 +370,11 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     options: [
       {
         key: 'subjectLabel',
-        label: 'Nome do campo de assunto',
+        label: 'Nome do campo de tipo de evento',
         type: 'text',
         maxLength: 40,
-        default: 'Assunto',
-        help: 'As opções vêm dos cartões que têm "Opção no formulário". Sem opções, o campo não aparece.',
+        default: 'Tipo de evento',
+        help: 'As opções vêm dos cartões de "Tipos de evento" que têm "Opção no formulário". Sem opções, o campo não aparece.',
       },
       { key: 'showDate', label: 'Pedir uma data', type: 'toggle', default: true },
       { key: 'dateLabel', label: 'Nome do campo de data', type: 'text', maxLength: 40, default: 'Data desejada' },

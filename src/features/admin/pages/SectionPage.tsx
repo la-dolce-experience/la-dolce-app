@@ -407,8 +407,8 @@ function SectionEditor({ id }: { id: string }) {
         <div className={a.notice}>
           <Info aria-hidden="true" />
           <p>
-            As opções do campo de assunto vêm dos <strong>cartões</strong> que têm “Opção no formulário”. O número que
-            recebe as mensagens é configurado em <strong>Contato e marca</strong>.
+            As opções de “Tipo de evento” vêm dos cartões da seção <strong>Tipos de evento</strong> que têm “Opção no
+            formulário”. O número que recebe as mensagens é configurado em <strong>Contato e marca</strong>.
           </p>
         </div>
       )}

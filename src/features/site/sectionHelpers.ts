@@ -45,7 +45,7 @@ export function hasContent(section: Section): boolean {
 /** Rótulos dos campos configuráveis (painel → seção do formulário → opções). */
 export function formLabels(section: Section): QuoteMessageLabels {
   return {
-    subject: opt(section, 'subjectLabel') || 'Assunto',
+    subject: opt(section, 'subjectLabel') || 'Tipo de evento',
     date: opt(section, 'dateLabel') || 'Data desejada',
     quantity: opt(section, 'quantityLabel') || 'Quantidade',
     location: opt(section, 'locationLabel') || 'Cidade ou local',
