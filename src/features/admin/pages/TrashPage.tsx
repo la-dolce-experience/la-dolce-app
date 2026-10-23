@@ -10,21 +10,12 @@ import {
   type TrashRow,
 } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
+import { notifyPublishedChange } from '../../../lib/preview';
 import a from '../admin.module.css';
 import { useFeedback } from '../components/Feedback';
+import { useSections } from '../SectionsContext';
 import { PageHeader } from './PageHeader';
 import styles from './TrashPage.module.css';
-
-/** Nome do item e seção do painel onde ele volta a aparecer. */
-const ORIGIN: Record<string, { item: string; section: string; label: string }> = {
-  event_types: { item: 'Tipo de evento', section: 'events', label: 'Tipos de evento' },
-  features: { item: 'Diferencial', section: 'personalization', label: 'Personalização' },
-  flavor_items: { item: 'Sabor ou apresentação', section: 'flavors', label: 'Sabores e apresentação' },
-  steps: { item: 'Etapa', section: 'steps', label: 'Como funciona' },
-  gallery_items: { item: 'Foto da galeria', section: 'gallery', label: 'Galeria' },
-  faqs: { item: 'Pergunta frequente', section: 'faq', label: 'Perguntas frequentes' },
-  testimonials: { item: 'Depoimento', section: 'testimonials', label: 'Depoimentos' },
-};
 
 const KEEP_DAYS = 30;
 const dateTime = new Intl.DateTimeFormat('pt-BR', {
@@ -46,8 +37,12 @@ function download(name: string, content: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+const sectionIdOf = (item: TrashRow) => String((item.row_data as Record<string, unknown>).section_id ?? '');
+const rowIdOf = (item: TrashRow) => String((item.row_data as Record<string, unknown>).id ?? '');
+
 export function TrashPage() {
   const { notify, confirm } = useFeedback();
+  const { sections, reload: reloadSections } = useSections();
   const [items, setItems] = useState<TrashRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -69,20 +64,37 @@ export function TrashPage() {
     setBusyId(item.id);
     try {
       await restoreFromTrash(item.id);
-      setItems((list) => list!.filter((i) => i.id !== item.id));
-      notify('success', `“${item.label}” foi restaurado em ${ORIGIN[item.table_name]?.label ?? 'sua lista'}.`);
+      // Uma seção volta com os itens que foram excluídos junto com ela.
+      const restored = item.table_name === 'sections' ? rowIdOf(item) : null;
+      setItems((list) => list!.filter((i) => i.id !== item.id && (!restored || sectionIdOf(i) !== restored)));
+      if (item.table_name === 'sections') reloadSections();
+      notifyPublishedChange();
+      notify(
+        'success',
+        item.table_name === 'sections'
+          ? `A seção “${item.label}” voltou para a página, na posição em que estava.`
+          : `“${item.label}” foi restaurado.`,
+      );
     } catch (e) {
-      const code = (e as { code?: string }).code;
+      const { code, hint } = e as { code?: string; hint?: string };
       notify(
         'error',
-        code === '23503'
-          ? 'Não foi possível restaurar: a imagem usada por este item foi excluída da biblioteca.'
-          : toFriendlyError(e),
+        hint === 'secao_excluida'
+          ? 'A seção deste item foi excluída. Restaure primeiro a seção: os itens voltam junto.'
+          : code === '23505'
+            ? 'Já existe uma seção com o mesmo endereço ou do mesmo tipo único. Exclua ou renomeie a atual antes.'
+            : code === '23503'
+              ? 'Não foi possível restaurar: a imagem usada por este item foi excluída da biblioteca.'
+              : toFriendlyError(e),
       );
     } finally {
       setBusyId(null);
     }
   }
+
+  // Itens de uma seção que também está na lixeira aparecem dentro dela (voltam juntos).
+  const trashedSections = new Set((items ?? []).filter((i) => i.table_name === 'sections').map(rowIdOf));
+  const visible = items?.filter((i) => i.table_name === 'sections' || !trashedSections.has(sectionIdOf(i)));
 
   async function remove(item: TrashRow) {
     const ok = await confirm({
@@ -94,9 +106,14 @@ export function TrashPage() {
     if (!ok) return;
     setBusyId(item.id);
     try {
-      await deleteFromTrash(item.id);
-      setItems((list) => list!.filter((i) => i.id !== item.id));
-      notify('success', 'Item excluído definitivamente.');
+      // Os itens de uma seção vão embora junto com ela.
+      const removed = [
+        item,
+        ...(item.table_name === 'sections' ? (items ?? []).filter((i) => sectionIdOf(i) === rowIdOf(item)) : []),
+      ].map((i) => i.id);
+      for (const id of removed) await deleteFromTrash(id);
+      setItems((list) => list!.filter((i) => !removed.includes(i.id)));
+      notify('success', 'Excluído definitivamente.');
     } catch (e) {
       notify('error', toFriendlyError(e));
     } finally {
@@ -131,8 +148,8 @@ export function TrashPage() {
           <div>
             <h2 id="trash-title">Lixeira</h2>
             <p>
-              Itens excluídos das listas (tipos de evento, galeria, perguntas…) ficam aqui por {KEEP_DAYS} dias e depois
-              são apagados de vez.
+              Seções e itens excluídos (cartões, fotos, perguntas…) ficam aqui por {KEEP_DAYS} dias e depois são
+              apagados de vez. Uma seção restaurada volta com os itens que tinha.
             </p>
           </div>
         </div>
@@ -157,25 +174,31 @@ export function TrashPage() {
             <LoaderCircle className={a.spin} aria-hidden="true" /> Carregando…
           </p>
         )}
-        {items && items.length === 0 && <p className={a.empty}>A lixeira está vazia.</p>}
+        {visible && visible.length === 0 && <p className={a.empty}>A lixeira está vazia.</p>}
 
-        {items && items.length > 0 && (
+        {visible && visible.length > 0 && (
           <ul className={styles.list}>
-            {items.map((item) => {
-              const origin = ORIGIN[item.table_name];
+            {visible.map((item) => {
+              const isSection = item.table_name === 'sections';
+              const parent = isSection ? undefined : sections?.find((s) => s.id === sectionIdOf(item));
+              const children = isSection ? (items ?? []).filter((i) => sectionIdOf(i) === rowIdOf(item)).length : 0;
               const left = daysLeft(item.deleted_at);
               return (
                 <li key={item.id} className={styles.item}>
                   <div>
-                    <p className={styles.kind}>{origin?.item ?? item.table_name}</p>
+                    <p className={styles.kind}>
+                      {isSection
+                        ? `Seção${children ? ` · com ${children} ${children === 1 ? 'item' : 'itens'}` : ''}`
+                        : 'Item de seção'}
+                    </p>
                     <p className={styles.label}>{item.label || '(sem título)'}</p>
                     <p className={a.muted}>
                       Excluído em {dateTime.format(new Date(item.deleted_at))} ·{' '}
                       {left <= 1 ? 'some amanhã' : `some em ${left} dias`}
-                      {origin && (
+                      {parent && (
                         <>
                           {' · '}
-                          <Link to={`/admin/secoes/${origin.section}`}>{origin.label}</Link>
+                          <Link to={`/admin/secoes/${parent.id}`}>{parent.name}</Link>
                         </>
                       )}
                     </p>

@@ -23,6 +23,16 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
+const flavor = {
+  id: 'ninho',
+  title: 'Ninho com Nutella',
+  description: '',
+  label: '',
+  image: null,
+  photos: [],
+  rating: 5,
+};
+
 describe('Página inicial', () => {
   it('renderiza as seções com o conteúdo real e hierarquia de títulos correta', async () => {
     renderHome();
@@ -33,21 +43,68 @@ describe('Página inicial', () => {
     for (const title of [
       'Uma experiência que vira assunto.',
       'Levamos a La Dolce Experience até você.',
+      'Sorvete servido na hora, com presença de marca.',
+      'Apresentações',
       'Seu evento, com a sua cara.',
       'Vamos criar uma experiência inesquecível?',
       'Onde atendemos',
     ]) {
       expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
     }
-    // Seções sem conteúdo real ficam ocultas.
+    // Seções de lista ainda sem conteúdo real ficam ocultas.
     expect(screen.queryByRole('heading', { name: 'Perguntas frequentes' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Quem já viveu a experiência' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Sabores' })).not.toBeInTheDocument();
+  });
+
+  it('sabores e apresentações aparecem logo abaixo de "Sabores e apresentação"', async () => {
+    const sections = defaultContent.sections.map((s) =>
+      s.slug === 'lista-de-sabores' ? { ...s, items: [flavor] } : s,
+    );
+    const { container } = renderHome(async () => ({ ...defaultContent, sections }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Sabores' })).toBeInTheDocument();
+    const ids = [...container.querySelectorAll('main > section[id]')].map((e) => e.id);
+    const start = ids.indexOf('sabores');
+    expect(ids.slice(start, start + 3)).toEqual(['sabores', 'lista-de-sabores', 'apresentacoes']);
+    expect(screen.getByRole('heading', { level: 4, name: 'Ninho com Nutella' })).toBeInTheDocument();
+  });
+
+  it('mostra as seções na ordem definida no painel', async () => {
+    const [hero, ...rest] = defaultContent.sections;
+    const custom: SiteContent = { ...defaultContent, sections: [hero, ...rest.reverse()] };
+    renderHome(async () => custom);
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() => {
+      const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+      expect(titles.indexOf('Onde atendemos')).toBeLessThan(titles.indexOf('Uma experiência que vira assunto.'));
+    });
+  });
+
+  it('esconde seções de lista sem itens', async () => {
+    const sections = defaultContent.sections.map((s) => (s.type === 'galeria' ? { ...s, items: [] } : s));
+    renderHome(async () => ({ ...defaultContent, sections }));
+    await screen.findByRole('heading', { level: 1 });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: 'Produto bonito antes mesmo da primeira colherada.' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('link', { name: 'Galeria' })).not.toBeInTheDocument();
   });
 
   it('todas as imagens têm texto alternativo', async () => {
     const { container } = renderHome();
     await screen.findByRole('heading', { level: 1 });
     for (const img of container.querySelectorAll('img')) expect(img).toHaveAttribute('alt');
+  });
+
+  it('sem logotipo, mostra o nome do negócio', async () => {
+    renderHome(async () => ({ ...defaultContent, settings: { ...defaultContent.settings, logo: null } }));
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'La Dolce Experience — início' })).toHaveTextContent(
+        'La Dolce Experience',
+      ),
+    );
   });
 
   it('botão flutuante abre o WhatsApp com a mensagem inicial', async () => {
@@ -60,13 +117,25 @@ describe('Página inicial', () => {
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
 
+  it('sem formulário na página, os botões principais levam ao WhatsApp', async () => {
+    const sections = defaultContent.sections.filter((s) => s.type !== 'formulario');
+    renderHome(async () => ({ ...defaultContent, sections }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: 'Vamos criar uma experiência inesquecível?' }),
+      ).not.toBeInTheDocument(),
+    );
+    const hero = screen.getByRole('link', { name: 'Solicitar orçamento' });
+    expect(hero.getAttribute('href')).toMatch(/^https:\/\/wa\.me\//);
+    expect(screen.getAllByRole('link', { name: 'Fale conosco' })[0].getAttribute('href')).toMatch(
+      /^https:\/\/wa\.me\//,
+    );
+  });
+
   it('mostra o conteúdo do banco quando disponível', async () => {
     const custom: SiteContent = {
       ...defaultContent,
-      sections: {
-        ...defaultContent.sections,
-        hero: { ...defaultContent.sections.hero, title: 'Título vindo do painel' },
-      },
+      sections: defaultContent.sections.map((s) => (s.type === 'hero' ? { ...s, title: 'Título vindo do painel' } : s)),
     };
     renderHome(async () => custom);
     expect(await screen.findByRole('heading', { level: 1, name: 'Título vindo do painel' })).toBeInTheDocument();
@@ -91,6 +160,7 @@ describe('Menu móvel', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const mobileNav = screen.getByRole('navigation', { name: 'Menu móvel' });
     expect(within(mobileNav).getByRole('link', { name: 'Galeria' })).toBeVisible();
+    expect(within(mobileNav).getByRole('link', { name: 'Pedir orçamento' })).toHaveAttribute('href', '#orcamento');
     await user.keyboard('{Escape}');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveFocus();
@@ -152,8 +222,8 @@ describe('Formulário de orçamento', () => {
         'Nome: Ana Souza',
         'Contato: (11) 98765-4321',
         'Tipo de evento: Evento corporativo',
-        'Convidados (estimativa): 150',
-        'Descrição: Lançamento de produto.\nCom logo da empresa.',
+        'Nº estimado de convidados: 150',
+        'Conte um pouco sobre o evento: Lançamento de produto.\nCom logo da empresa.',
         '',
         'Poderiam me orientar sobre os próximos passos?',
       ].join('\n'),
@@ -178,5 +248,18 @@ describe('Formulário de orçamento', () => {
     const { user, form } = await setup();
     await user.click(screen.getByRole('link', { name: /Pedir orçamento para feira ou exposição/ }));
     expect(form.getByLabelText(/Tipo de evento/)).toHaveValue('Feira ou exposição');
+  });
+
+  it('mostra só os campos ligados no painel, com os nomes escolhidos', async () => {
+    const sections = defaultContent.sections.map((s) =>
+      s.type === 'formulario'
+        ? { ...s, options: { ...s.options, showDate: false, quantityLabel: 'Quantas pessoas' } }
+        : s,
+    );
+    renderHome(async () => ({ ...defaultContent, sections }));
+    const heading = await screen.findByRole('heading', { name: 'Vamos criar uma experiência inesquecível?' });
+    const form = within(heading.closest('section')!);
+    await waitFor(() => expect(form.getByLabelText(/Quantas pessoas/)).toBeInTheDocument());
+    expect(form.queryByLabelText(/Data prevista/)).not.toBeInTheDocument();
   });
 });

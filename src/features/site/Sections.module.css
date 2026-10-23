@@ -660,6 +660,24 @@
   font-size: var(--fs-sm);
 }
 
+.flavorCard .itemLabel {
+  color: var(--color-brand-deep);
+  font-weight: 800;
+}
+
+/*
+ * Catálogo sem título, texto e foto: só a grade, colada na seção anterior. O espaço fica igual ao das listas
+ * dentro de uma seção (o respiro de baixo da seção anterior é compensado pela margem negativa).
+ */
+.catalogCompact {
+  padding-top: 0;
+  margin-top: calc(var(--space-10) - var(--section-y));
+}
+
+.catalogCompact + .catalogCompact {
+  margin-top: calc(var(--space-8) - var(--section-y));
+}
+
 .flavorCardPhoto {
   padding: 0;
   overflow: hidden;

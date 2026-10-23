@@ -1,7 +1,11 @@
 import type { ReactNode } from 'react';
+import type { SectionRow } from '../../../services/adminService';
 
 export interface TourStep {
-  /** Tela do painel aberta neste passo. */
+  /**
+   * Tela do painel aberta neste passo. "/admin/secoes/@tipo" abre a primeira seção daquele tipo
+   * (ver resolveTourSteps); sem seção do tipo, o passo é pulado.
+   */
   route: string;
   /** Elemento destacado (seletor CSS). Sem alvo, o balão aparece centralizado. */
   target?: string;
@@ -52,7 +56,7 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'O site, parte por parte',
     body: (
       <>
-        <p>Cada item do menu é uma parte do site, na mesma ordem em que o visitante vê.</p>
+        <p>Cada item do menu é uma seção do site, na mesma ordem em que o visitante vê.</p>
         <p>
           No celular, o menu fica no botão <strong>Menu</strong>, no topo da tela.
         </p>
@@ -60,7 +64,35 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/hero',
+    route: '/admin/secoes',
+    target: '[data-tour="sections-order"]',
+    title: 'Monte a página',
+    body: (
+      <>
+        <p>
+          Aqui fica a ordem das seções. Arraste pela alça (no computador) ou use as setas ↑ ↓. A nova ordem vale na hora
+          no site.
+        </p>
+        <p>
+          Em cada linha dá para <strong>ocultar</strong>, <strong>duplicar</strong>, <strong>editar</strong> ou{' '}
+          <strong>excluir</strong> a seção. Seções excluídas ficam na Lixeira por 30 dias.
+        </p>
+      </>
+    ),
+  },
+  {
+    route: '/admin/secoes',
+    target: '[data-tour="sections-add"]',
+    title: 'Adicionar seções',
+    body: (
+      <p>
+        Escolha o tipo (texto com imagem, cartões, galeria, depoimentos, perguntas…), dê um nome e diga onde ela entra.
+        Passando o mouse entre duas seções aparece <strong>Adicionar seção aqui</strong>.
+      </p>
+    ),
+  },
+  {
+    route: '/admin/secoes/@hero',
     target: '[data-tour="image-picker"]',
     title: 'Textos e fotos',
     body: (
@@ -69,12 +101,12 @@ export const TOUR_STEPS: TourStep[] = [
           Este é o <strong>Destaque principal</strong>, a primeira parte do site. Altere os textos nos campos e use{' '}
           <strong>Trocar imagem</strong> para escolher outra foto.
         </p>
-        <p>A descrição da foto é obrigatória: ela ajuda pessoas com deficiência visual e o Google.</p>
+        <p>A descrição da foto é importante: ela ajuda pessoas com deficiência visual e o Google.</p>
       </>
     ),
   },
   {
-    route: '/admin/secoes/hero',
+    route: '/admin/secoes/@hero',
     target: '[data-tour="preview-open"]',
     title: 'Pré-visualização ao vivo',
     body: (
@@ -91,7 +123,7 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/hero',
+    route: '/admin/secoes/@hero',
     target: '[data-tour="save-bar"]',
     title: 'Salvar ou descartar',
     body: (
@@ -107,28 +139,28 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/hero',
-    target: '[data-tour="view-site"]',
-    title: 'Conferir no site',
+    route: '/admin/secoes/@hero',
+    target: '[data-tour="section-identity"]',
+    title: 'Nome, menu e endereço',
     body: (
       <p>
-        <strong>Ver no site</strong> abre esta parte do site publicado em outra aba, do jeito que os visitantes veem.
+        Cada seção tem um nome (só no painel), um item opcional no menu do site e um endereço, usado nos links do menu.
       </p>
     ),
   },
   {
-    route: '/admin/secoes/events',
+    route: '/admin/secoes/@cartoes',
     target: '[data-tour="list-add"]',
     title: 'Listas: adicionar itens',
     body: (
       <p>
-        Tipos de evento, sabores, galeria, depoimentos, perguntas e outras partes do site são listas.{' '}
-        <strong>Adicionar</strong> cria um item no fim da lista, que é onde ele aparece no site.
+        Cartões, galeria, depoimentos, perguntas e outras seções têm listas. <strong>Adicionar</strong> cria um item no
+        fim da lista, que é onde ele aparece no site.
       </p>
     ),
   },
   {
-    route: '/admin/secoes/events',
+    route: '/admin/secoes/@cartoes',
     target: '[data-tour="list-item"]',
     title: 'Ordenar, ocultar e excluir',
     body: (
@@ -144,19 +176,20 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/flavors',
-    target: '[data-tour="list-sabor"]',
+    route: '/admin/secoes/@catalogo',
+    target: '[data-tour="list-catalogo"]',
     title: 'Sabores e apresentações',
     body: (
       <p>
         Cadastre quantos <strong>sabores</strong> e <strong>apresentações</strong> (copinho, casquinha...) quiser, com
-        descrição e foto opcionais. Eles aparecem no site abaixo do texto da seção.
+        descrição e foto opcionais. Cada lista é uma seção: no site, elas aparecem abaixo de &ldquo;Sabores e
+        apresentação&rdquo;.
       </p>
     ),
   },
   {
-    route: '/admin/secoes/gallery',
-    target: '[data-tour="list-gallery_items"]',
+    route: '/admin/secoes/@galeria',
+    target: '[data-tour="list-galeria"]',
     title: 'Galeria de fotos',
     body: (
       <>
@@ -169,8 +202,8 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/testimonials',
-    target: '[data-tour="list-testimonials"]',
+    route: '/admin/secoes/@depoimentos',
+    target: '[data-tour="list-depoimentos"]',
     title: 'Depoimentos',
     body: (
       <>
@@ -185,18 +218,18 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
   {
-    route: '/admin/secoes/quote',
-    target: '[data-tour="section-form"]',
+    route: '/admin/secoes/@formulario',
+    target: '[data-tour="section-options"]',
     title: 'Formulário de orçamento',
     body: (
       <p>
-        Os textos do formulário que abre o WhatsApp com os dados do evento. As opções de &ldquo;Tipo de evento&rdquo;
-        vêm da tela <strong>Tipos de evento</strong>.
+        Escolha quais campos o formulário pede e o nome de cada um. Ao enviar, ele abre o WhatsApp com a mensagem
+        pronta; as opções de &ldquo;Tipo de evento&rdquo; vêm dos cartões da seção <strong>Tipos de evento</strong>.
       </p>
     ),
   },
   {
-    route: '/admin/secoes/location',
+    route: '/admin/secoes/@contato',
     target: '[data-tour="location"]',
     title: 'Atendimento e localização',
     body: <p>Região atendida, horários, endereço e o mapa do Google. Campos em branco não aparecem no site.</p>,
@@ -218,8 +251,8 @@ export const TOUR_STEPS: TourStep[] = [
     title: 'WhatsApp e contatos',
     body: (
       <p>
-        O número que recebe os pedidos de orçamento e a mensagem inicial da conversa. Use{' '}
-        <strong>Teste o número</strong> para conferir. Mais abaixo ficam e-mail, redes sociais e logotipo.
+        O número que recebe as mensagens do site e a mensagem inicial da conversa. Use <strong>Teste o número</strong>{' '}
+        para conferir. Mais abaixo ficam e-mail, redes sociais e logotipo.
       </p>
     ),
   },
@@ -268,3 +301,13 @@ export const TOUR_STEPS: TourStep[] = [
     ),
   },
 ];
+
+/** Troca "/admin/secoes/@tipo" pelo endereço da primeira seção do tipo; sem seção do tipo, o passo sai do tour. */
+export function resolveTourSteps(steps: TourStep[], sections: Pick<SectionRow, 'id' | 'type'>[]): TourStep[] {
+  return steps.flatMap((step) => {
+    const match = /^\/admin\/secoes\/@(.+)$/.exec(step.route);
+    if (!match) return [step];
+    const section = sections.find((s) => s.type === match[1]);
+    return section ? [{ ...step, route: `/admin/secoes/${section.id}` }] : [];
+  });
+}

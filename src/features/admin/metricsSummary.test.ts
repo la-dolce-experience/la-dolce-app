@@ -36,6 +36,11 @@ describe('resumo das métricas', () => {
     ]);
   });
 
+  it('mostra o nome da seção quando o clique veio do botão de uma seção', () => {
+    const s = summarize([row('2026-10-17', 'whatsapp_click', 4, 'sobre')], 7, TODAY, { sobre: 'Sobre nós' });
+    expect(s.sources).toEqual([{ key: 'sobre', label: 'Sobre nós', total: 4 }]);
+  });
+
   it('ignora dias fora do período e não divide por zero', () => {
     const s = summarize([row('2026-09-01', 'visit', 99), row('2026-10-17', 'whatsapp_click', 1, 'x')], 7, TODAY);
     expect(s.visits).toBe(0);

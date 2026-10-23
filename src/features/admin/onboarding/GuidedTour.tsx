@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/Button/Button';
-import { TOUR_STEPS } from './steps';
+import { TOUR_STEPS, type TourStep } from './steps';
 import styles from './GuidedTour.module.css';
 
 /** Abaixo desta largura o balão vira uma folha presa ao topo ou ao rodapé da tela. */
@@ -23,6 +23,8 @@ interface Props {
   onClose: () => void;
   /** Tempo máximo esperando a tela carregar o elemento destacado. */
   findTimeoutMs?: number;
+  /** Passos já com as rotas das seções resolvidas (ver resolveTourSteps). */
+  steps?: TourStep[];
 }
 
 function visibleElement(selector?: string): HTMLElement | null {
@@ -55,7 +57,7 @@ const RECHECK_MS = [300, 800, 1500];
  * Tour guiado pelo painel: a cada passo abre a tela correspondente, destaca o
  * elemento explicado e mostra um balão ao lado dele.
  */
-export function GuidedTour({ onClose, findTimeoutMs = 5000 }: Props) {
+export function GuidedTour({ onClose, findTimeoutMs = 5000, steps = TOUR_STEPS }: Props) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [index, setIndex] = useState(0);
@@ -64,8 +66,8 @@ export function GuidedTour({ onClose, findTimeoutMs = 5000 }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const step = TOUR_STEPS[index];
-  const total = TOUR_STEPS.length;
+  const step = steps[index];
+  const total = steps.length;
   const isLast = index === total - 1;
   const ready = found?.index === index;
   const target = ready ? found.el : null;

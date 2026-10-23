@@ -1,4 +1,5 @@
 import type { SiteContent } from '../types/content';
+import { findSection } from '../features/site/sectionHelpers';
 import { hasPhysicalAddress, safeExternalUrl } from './location';
 
 /** Dados estruturados (schema.org) para o Google entender o negócio. */
@@ -13,8 +14,8 @@ export function buildStructuredData(content: SiteContent, siteUrl: string) {
     name: s.businessName,
     description: s.seoDescription,
     url: siteUrl,
-    image: abs(s.ogImage?.src ?? content.sections.hero.image?.src),
-    logo: abs(s.logo.src),
+    image: abs(s.ogImage?.src ?? findSection(content, 'hero')?.image?.src),
+    ...(s.logo && { logo: abs(s.logo.src) }),
     telephone: `+${s.whatsappNumber}`,
     ...(s.email && { email: s.email }),
     ...(s.serviceArea && { areaServed: s.serviceArea }),

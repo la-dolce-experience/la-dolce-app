@@ -4,12 +4,14 @@ import { safeExternalUrl } from '../../utils/location';
 import { formatBrazilianPhone } from '../../utils/phone';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { buildNavItems } from './navigation';
+import { findSection } from './sectionHelpers';
 import styles from './Footer.module.css';
 
 export function Footer() {
   const { content } = useSiteContent();
   const { settings } = content;
   const nav = buildNavItems(content);
+  const form = findSection(content, 'formulario');
   const socials = [
     { label: 'Instagram', href: safeExternalUrl(settings.instagramUrl), icon: <InstagramIcon /> },
     { label: 'Facebook', href: safeExternalUrl(settings.facebookUrl), icon: <FacebookIcon /> },
@@ -20,15 +22,19 @@ export function Footer() {
     <footer className={styles.footer}>
       <div className={`container ${styles.grid}`}>
         <div className={styles.brand}>
-          <img
-            src={settings.logo.src}
-            srcSet={settings.logo.srcSet}
-            sizes={settings.logo.srcSet ? '132px' : undefined}
-            alt={settings.businessName}
-            width={settings.logo.width}
-            height={settings.logo.height}
-            loading="lazy"
-          />
+          {settings.logo ? (
+            <img
+              src={settings.logo.src}
+              srcSet={settings.logo.srcSet}
+              sizes={settings.logo.srcSet ? '132px' : undefined}
+              alt={settings.businessName}
+              width={settings.logo.width}
+              height={settings.logo.height}
+              loading="lazy"
+            />
+          ) : (
+            <p className={styles.brandName}>{settings.businessName}</p>
+          )}
           {settings.footerTagline && <p>{settings.footerTagline}</p>}
         </div>
 
@@ -40,9 +46,11 @@ export function Footer() {
                 <a href={item.href}>{item.label}</a>
               </li>
             ))}
-            <li>
-              <a href="#orcamento">Orçamento</a>
-            </li>
+            {form && (
+              <li>
+                <a href={`#${form.slug}`}>{form.navLabel.trim() || 'Fale conosco'}</a>
+              </li>
+            )}
           </ul>
         </nav>
 

@@ -2,18 +2,17 @@ import { useState } from 'react';
 import { Lightbox } from '../../components/Lightbox/Lightbox';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
-import { useSiteContent } from '../../hooks/useSiteContent';
+import type { Section } from '../../types/content';
 import styles from './Sections.module.css';
 
 /** Acima deste número de fotos, a página mostra só as primeiras e um botão "+N" para ver todas. */
 const MAX_TILES = 3;
 
-export function GallerySection() {
-  const { content } = useSiteContent();
-  const section = content.sections.gallery;
+export function GallerySection({ section }: { section: Section }) {
   const [open, setOpen] = useState<number | null>(null);
-  const items = content.gallery;
-  if (!section.visible || items.length === 0) return null;
+  // Na galeria todo item tem foto (mapContent descarta os que perderam a imagem).
+  const items = section.items.map((i) => ({ id: i.id, image: i.image!, caption: i.description }));
+  const headingId = `${section.slug}-title`;
 
   const collapsed = items.length > MAX_TILES;
   const tiles = items.slice(0, MAX_TILES);
@@ -21,10 +20,10 @@ export function GallerySection() {
   const hidden = items.length - (MAX_TILES - 1);
 
   return (
-    <section id="galeria" className={styles.section} aria-labelledby="gallery-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className="container">
         <SectionHeading
-          id="gallery-title"
+          id={headingId}
           align="center"
           eyebrow={section.eyebrow}
           title={section.title}

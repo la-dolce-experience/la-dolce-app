@@ -3,8 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Lightbox } from '../../components/Lightbox/Lightbox';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
-import { useSiteContent } from '../../hooks/useSiteContent';
-import type { Testimonial } from '../../types/content';
+import type { Section, SectionItem } from '../../types/content';
 import styles from './Sections.module.css';
 
 export function Stars({ rating }: { rating: number }) {
@@ -21,9 +20,9 @@ export function Stars({ rating }: { rating: number }) {
 const MAX_THUMBS = 3;
 
 /** Fotos do evento de um depoimento: miniaturas que abrem em tela cheia, em carrossel. */
-function EventPhotos({ testimonial }: { testimonial: Testimonial }) {
+function EventPhotos({ testimonial }: { testimonial: SectionItem }) {
   const [open, setOpen] = useState<number | null>(null);
-  const { photos, author } = testimonial;
+  const { photos, title: author } = testimonial;
   if (photos.length === 0) return null;
 
   const collapsed = photos.length > MAX_THUMBS;
@@ -63,7 +62,7 @@ function EventPhotos({ testimonial }: { testimonial: Testimonial }) {
           items={photos.map((image, i) => ({
             id: `${testimonial.id}-${i}`,
             image,
-            caption: [author, testimonial.context].filter(Boolean).join(' · '),
+            caption: [author, testimonial.label].filter(Boolean).join(' · '),
           }))}
           start={open}
           onClose={() => setOpen(null)}
@@ -74,10 +73,9 @@ function EventPhotos({ testimonial }: { testimonial: Testimonial }) {
 }
 
 /** Depoimentos em carrossel: arrastar (celular), setas e pontos. 1, 2 ou 3 por vez conforme a tela. */
-export function TestimonialsSection() {
-  const { content } = useSiteContent();
-  const section = content.sections.testimonials;
-  const items = content.testimonials;
+export function TestimonialsSection({ section }: { section: Section }) {
+  const items = section.items;
+  const headingId = `${section.slug}-title`;
   const trackRef = useRef<HTMLDivElement>(null);
   const [state, setState] = useState({ active: 0, canPrev: false, canNext: false });
 
@@ -105,8 +103,6 @@ export function TestimonialsSection() {
     return () => window.removeEventListener('resize', update);
   }, [update, items.length]);
 
-  if (!section.visible || items.length === 0) return null;
-
   function goTo(index: number) {
     const track = trackRef.current;
     const slides = track ? (Array.from(track.children) as HTMLElement[]) : [];
@@ -118,10 +114,10 @@ export function TestimonialsSection() {
   const scrollable = state.canPrev || state.canNext;
 
   return (
-    <section id="depoimentos" className={styles.section} aria-labelledby="testimonials-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className="container">
         <SectionHeading
-          id="testimonials-title"
+          id={headingId}
           align="center"
           eyebrow={section.eyebrow}
           title={section.title}
@@ -134,13 +130,13 @@ export function TestimonialsSection() {
               <div key={t.id} role="group" aria-roledescription="depoimento" aria-label={`${i + 1} de ${items.length}`}>
                 <figure className={styles.testimonial}>
                   <Stars rating={t.rating} />
-                  <blockquote className="prewrap">“{t.quote}”</blockquote>
+                  <blockquote className="prewrap">“{t.description}”</blockquote>
                   <EventPhotos testimonial={t} />
                   <figcaption>
                     {t.image && <ResponsiveImage image={t.image} sizes="56px" className={styles.avatar} alt="" />}
                     <span>
-                      <strong>{t.author}</strong>
-                      {t.context && <span className={styles.testimonialContext}>{t.context}</span>}
+                      <strong>{t.title}</strong>
+                      {t.label && <span className={styles.testimonialContext}>{t.label}</span>}
                     </span>
                   </figcaption>
                 </figure>

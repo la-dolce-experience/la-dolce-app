@@ -1,25 +1,39 @@
-import { Info, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Copy, Info, LoaderCircle, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../../components/Button/Button';
-import { clearPreviewDraft, updatePreviewDraft, type SectionDraft } from '../../../lib/preview';
+import { clearPreviewDraft, notifyPublishedChange, updatePreviewDraft, type SectionDraft } from '../../../lib/preview';
 import { getSection, listMedia, updateSection, type MediaRow, type SectionRow } from '../../../services/adminService';
 import { toFriendlyError } from '../../../services/errors';
-import { SECTION_KEYS, type SectionKey } from '../../../types/content';
+import type { SectionType } from '../../../types/content';
 import a from '../admin.module.css';
 import { useFeedback } from '../components/Feedback';
-import { TextAreaField, TextField, ToggleField } from '../components/Fields';
+import { SelectField, TextAreaField, TextField, ToggleField } from '../components/Fields';
 import { ImagePicker } from '../components/ImagePicker';
 import { ListEditor } from '../components/ListEditor';
 import { SaveBar } from '../components/SaveBar';
 import { useTrackDirty } from '../components/UnsavedChanges';
 import { useFormState } from '../hooks';
 import { useLivePreview } from '../preview/LivePreview';
-import { sectionConfigByKey, type SectionConfig } from '../sectionConfig';
+import { useSectionActions } from '../sectionActions';
+import {
+  RESERVED_SLUGS,
+  sectionTypeConfig,
+  slugify,
+  withDefaultOptions,
+  type SectionTypeConfig,
+} from '../sectionTypes';
+import { defaultIconKey } from '../sectionIcons';
+import { useSections } from '../SectionsContext';
+import { IconPicker } from '../components/IconPicker';
 import { LocationSettings } from './LocationSettings';
 import { PageHeader } from './PageHeader';
 
 interface SectionForm {
+  name: string;
+  nav_label: string;
+  slug: string;
+  icon: string;
   eyebrow: string;
   title: string;
   body: string;
@@ -28,13 +42,31 @@ interface SectionForm {
   image_caption: string;
   image_media_id: string | null;
   image_alt: string;
+  options: Record<string, string | boolean>;
   visible: boolean;
 }
 
-const LIMITS = { eyebrow: 80, title: 140, body: 1200, cta_label: 60, note: 160, image_caption: 120, image_alt: 200 };
+const LIMITS = {
+  name: 60,
+  nav_label: 30,
+  slug: 40,
+  eyebrow: 80,
+  title: 140,
+  body: 1200,
+  cta_label: 60,
+  note: 160,
+  image_caption: 120,
+  image_alt: 200,
+};
+
+type TextKey = keyof typeof LIMITS;
 
 function toForm(row: SectionRow): SectionForm {
   return {
+    name: row.name,
+    nav_label: row.nav_label,
+    slug: row.slug,
+    icon: row.icon || defaultIconKey(row.type as SectionType),
     eyebrow: row.eyebrow,
     title: row.title,
     body: row.body,
@@ -43,50 +75,59 @@ function toForm(row: SectionRow): SectionForm {
     image_caption: row.image_caption,
     image_media_id: row.image_media_id,
     image_alt: row.image_alt,
+    options: withDefaultOptions(row.type as SectionType, row.options),
     visible: row.visible,
   };
 }
 
 export function SectionPage() {
-  const { key } = useParams();
-  if (!key || !(SECTION_KEYS as readonly string[]).includes(key)) return <Navigate to="/admin" replace />;
-  const config = sectionConfigByKey[key as SectionKey];
+  const { id } = useParams();
+  if (!id) return <Navigate to="/admin/secoes" replace />;
   // key no componente reinicia o estado ao trocar de seção pelo menu.
-  return <SectionEditor key={key} config={config} />;
+  return <SectionEditor key={id} id={id} />;
 }
 
-function SectionEditor({ config }: { config: SectionConfig }) {
+function SectionEditor({ id }: { id: string }) {
   const { notify } = useFeedback();
+  const navigate = useNavigate();
+  const { sections, setSections } = useSections();
+  const actions = useSectionActions();
   const form = useFormState<SectionForm>();
+  const [row, setRow] = useState<SectionRow | null>(null);
   const [media, setMedia] = useState<Map<string, MediaRow>>(new Map());
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<{ message: string; missing: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [titleError, setTitleError] = useState<string>();
+  const [errors, setErrors] = useState<Partial<Record<TextKey, string>>>({});
   const { open: previewing, show: showPreview } = useLivePreview();
-  useTrackDirty(`section:${config.key}`, form.dirty);
+  useTrackDirty(`section:${id}`, form.dirty);
+
+  const config: SectionTypeConfig | undefined = row ? sectionTypeConfig[row.type as SectionType] : undefined;
 
   const draft = (): SectionDraft | null =>
-    form.values && {
-      ...form.values,
-      media: form.values.image_media_id ? (media.get(form.values.image_media_id) ?? null) : null,
-    };
+    row && form.values
+      ? (({ updated_at: _ignored, ...rest }) => rest)({
+          ...row,
+          ...form.values,
+          media: form.values.image_media_id ? (media.get(form.values.image_media_id) ?? null) : null,
+        })
+      : null;
 
   // Com a pré-visualização aberta, cada alteração aparece nela (com uma pequena pausa enquanto digita).
   useEffect(() => {
     const d = draft();
     if (!previewing || !d) return;
-    const timer = setTimeout(() => updatePreviewDraft({ section: [config.key, d] }), 250);
+    const timer = setTimeout(() => updatePreviewDraft({ section: d }), 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewing, form.values, media]);
 
   // Ao sair da tela, o rascunho desta seção deixa de valer.
-  useEffect(() => () => clearPreviewDraft({ section: config.key }), [config.key]);
+  useEffect(() => () => clearPreviewDraft({ section: id }), [id]);
 
   function preview() {
     const d = draft();
     if (!d) return;
-    updatePreviewDraft({ section: [config.key, d] });
+    updatePreviewDraft({ section: d });
     showPreview();
   }
 
@@ -94,75 +135,106 @@ function SectionEditor({ config }: { config: SectionConfig }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getSection(config.key), config.fields.image ? listMedia() : Promise.resolve([])]).then(
-      ([row, mediaRows]) => {
+    Promise.all([getSection(id), listMedia()]).then(
+      ([section, mediaRows]) => {
         if (!active) return;
         setMedia(new Map(mediaRows.map((m) => [m.id, m])));
-        form.reset(toForm(row));
+        setRow(section);
+        form.reset(toForm(section));
       },
-      (e: unknown) => active && setLoadError(toFriendlyError(e)),
+      (e: unknown) =>
+        active &&
+        setLoadError({
+          message: toFriendlyError(e),
+          // Seção excluída (ou link antigo): .single() sem linhas.
+          missing: (e as { code?: string }).code === 'PGRST116',
+        }),
     );
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [attempt]);
+  }, [attempt, id]);
+
+  function validate(v: SectionForm): boolean {
+    const next: Partial<Record<TextKey, string>> = {};
+    if (!v.name.trim()) next.name = 'Dê um nome para a seção.';
+    const slug = v.slug.trim();
+    if (!slug) next.slug = 'Preencha o endereço da seção.';
+    else if (slug !== slugify(slug)) next.slug = 'Use só letras minúsculas sem acento, números e hífens.';
+    else if (RESERVED_SLUGS.includes(slug)) next.slug = 'Este endereço é reservado. Escolha outro.';
+    else if (sections?.some((s) => s.id !== id && s.slug === slug)) next.slug = 'Outra seção já usa este endereço.';
+    if (config?.fields.title && !config.titleOptional && !v.title.trim()) next.title = 'O título não pode ficar vazio.';
+    setErrors(next);
+    const first = Object.keys(next)[0];
+    if (first) document.getElementById(`section-${first}`)?.focus();
+    return !first;
+  }
 
   async function save() {
-    if (!form.values) return;
-    const v = form.values;
-    if (config.fields.title && !v.title.trim()) {
-      setTitleError('O título não pode ficar vazio.');
-      document.getElementById(`section-title`)?.focus();
-      return;
-    }
+    if (!form.values || !validate(form.values)) return;
     setSaving(true);
     try {
       const trimmed = Object.fromEntries(
-        Object.entries(v).map(([k, val]) => [k, typeof val === 'string' ? val.trim() : val]),
+        Object.entries(form.values).map(([k, val]) => [k, typeof val === 'string' ? val.trim() : val]),
       ) as unknown as SectionForm;
-      const row = await updateSection(config.key, trimmed);
-      form.reset(toForm(row));
-      clearPreviewDraft({ section: config.key });
+      const saved = await updateSection(id, trimmed);
+      setRow(saved);
+      form.reset(toForm(saved));
+      setSections((list) => list.map((s) => (s.id === saved.id ? saved : s)));
+      clearPreviewDraft({ section: id });
+      notifyPublishedChange();
       notify('success', 'Seção salva. As alterações já aparecem no site.');
     } catch (e) {
-      notify('error', toFriendlyError(e));
+      const code = (e as { code?: string }).code;
+      notify('error', code === '23505' ? 'Outra seção já usa este endereço. Escolha outro.' : toFriendlyError(e));
     } finally {
       setSaving(false);
     }
   }
 
+  if (loadError?.missing) return <Navigate to="/admin/secoes" replace />;
+
   const v = form.values;
-  const f = config.fields;
-  const text = (field: keyof typeof LIMITS, label: string, help?: string, multiline = false) => {
+  const f = config?.fields ?? {};
+  const text = (field: TextKey, label: string, help?: string, multiline = false) => {
     const common = {
-      id: `section-${field === 'title' ? 'title' : field}`,
+      id: `section-${field}`,
       label,
       help,
       maxLength: LIMITS[field],
       value: (v?.[field] as string) ?? '',
       onValueChange: (val: string) => {
-        form.set(field, val);
-        if (field === 'title') setTitleError(undefined);
+        form.set(field, field === 'slug' ? val.toLowerCase() : val);
+        if (errors[field]) setErrors(({ [field]: _removed, ...rest }) => rest);
       },
-      error: field === 'title' ? titleError : undefined,
-      required: field === 'title',
+      error: errors[field],
+      required: (field === 'title' && !config?.titleOptional) || field === 'name' || field === 'slug',
     };
     return multiline ? <TextAreaField {...common} rows={4} /> : <TextField {...common} />;
   };
+
+  const setOption = (key: string, value: string | boolean) =>
+    form.set('options', { ...(form.values?.options ?? {}), [key]: value });
 
   return (
     <>
       <PageHeader
         breadcrumb="Página inicial"
-        title={config.label}
-        description={config.description}
-        previewAnchor={config.anchor}
+        title={row?.name ?? 'Seção'}
+        description={config ? `${config.label}: ${config.description}` : undefined}
+        previewAnchor={row?.slug ?? undefined}
       />
+
+      <p className={a.backLink}>
+        <Link to="/admin/secoes">
+          <ArrowLeft aria-hidden="true" /> Todas as seções e a ordem da página
+        </Link>
+      </p>
 
       {loadError && (
         <div className={`${a.notice} ${a.noticeError}`} role="alert">
-          <p>{loadError}</p>
+          <p>{loadError.message}</p>
           <Button
             size="sm"
             variant="outline"
@@ -182,7 +254,7 @@ function SectionEditor({ config }: { config: SectionConfig }) {
         </p>
       )}
 
-      {v && (
+      {v && row && config && (
         <form
           className={a.panel}
           aria-labelledby="section-form-title"
@@ -243,6 +315,77 @@ function SectionEditor({ config }: { config: SectionConfig }) {
           )}
           {f.imageCaption && text('image_caption', f.imageCaption.label, f.imageCaption.help)}
 
+          {config.options && config.options.length > 0 && (
+            <fieldset className={a.fieldset} data-tour="section-options">
+              <legend>Opções de {config.label.toLowerCase()}</legend>
+              {config.options.map((o) => {
+                const id = `section-option-${o.key}`;
+                const value = v.options[o.key];
+                if (o.type === 'toggle') {
+                  return (
+                    <ToggleField
+                      key={o.key}
+                      id={id}
+                      label={o.label}
+                      help={o.help}
+                      checked={value === true}
+                      onChange={(checked) => setOption(o.key, checked)}
+                    />
+                  );
+                }
+                if (o.type === 'select') {
+                  return (
+                    <SelectField
+                      key={o.key}
+                      id={id}
+                      label={o.label}
+                      help={o.help}
+                      value={String(value ?? o.default)}
+                      options={o.choices}
+                      onValueChange={(val) => setOption(o.key, val)}
+                    />
+                  );
+                }
+                return (
+                  <TextField
+                    key={o.key}
+                    id={id}
+                    label={o.label}
+                    help={o.help}
+                    maxLength={o.maxLength}
+                    value={String(value ?? '')}
+                    onValueChange={(val) => setOption(o.key, val)}
+                  />
+                );
+              })}
+            </fieldset>
+          )}
+
+          <fieldset className={a.fieldset} data-tour="section-identity">
+            <legend>Nome, menu e endereço</legend>
+            {text('name', 'Nome da seção no painel', 'Só você vê. Aparece no menu do painel.')}
+            <IconPicker
+              id="section-icon"
+              label="Ícone no menu do painel"
+              help="Aparece ao lado do nome no menu lateral."
+              value={v.icon}
+              onChange={(key) => form.set('icon', key)}
+            />
+            {row.type !== 'hero' &&
+              text(
+                'nav_label',
+                row.type === 'formulario' ? 'Texto do botão do cabeçalho' : 'Item no menu do site (opcional)',
+                row.type === 'formulario'
+                  ? 'O formulário vira o botão de destaque no topo do site. Em branco: "Fale conosco".'
+                  : 'Em branco, a seção não aparece no menu. Use uma ou duas palavras.',
+              )}
+            {text(
+              'slug',
+              'Endereço da seção (âncora)',
+              `Usado nos links do menu: seusite.com.br/#${v.slug || 'endereco'}. Letras minúsculas, números e hífens.`,
+            )}
+          </fieldset>
+
           <SaveBar
             sticky={false}
             dirty={form.dirty}
@@ -250,29 +393,80 @@ function SectionEditor({ config }: { config: SectionConfig }) {
             onSave={save}
             onDiscard={() => {
               form.discard();
-              setTitleError(undefined);
-              clearPreviewDraft({ section: config.key });
+              setErrors({});
+              clearPreviewDraft({ section: id });
             }}
             onPreview={preview}
           />
         </form>
       )}
 
-      {config.key === 'location' && <LocationSettings />}
+      {row?.type === 'contato' && <LocationSettings />}
 
-      {config.key === 'quote' && (
+      {row?.type === 'formulario' && (
         <div className={a.notice}>
           <Info aria-hidden="true" />
           <p>
-            As opções de "Tipo de evento" do formulário vêm da seção <strong>Tipos de evento</strong>. O número que
+            As opções do campo de assunto vêm dos <strong>cartões</strong> que têm “Opção no formulário”. O número que
             recebe as mensagens é configurado em <strong>Contato e marca</strong>.
           </p>
         </div>
       )}
 
-      {config.lists?.map((list) => (
-        <ListEditor key={`${list.table}:${list.scope?.value ?? ''}`} {...list} />
-      ))}
+      {row && config?.list && (
+        <ListEditor
+          key={row.id}
+          table="section_items"
+          scope={{ column: 'section_id', value: row.id }}
+          tourId={row.type}
+          {...config.list}
+        />
+      )}
+
+      {row && config && (
+        <section className={a.panel} aria-labelledby="section-actions-title">
+          <div className={a.panelHeader}>
+            <div>
+              <h2 id="section-actions-title">Esta seção</h2>
+              <p>
+                {config.single
+                  ? 'Só pode haver uma seção deste tipo na página.'
+                  : 'Duplique para criar outra parecida (a cópia nasce oculta, logo abaixo desta).'}
+              </p>
+            </div>
+          </div>
+          <div className={a.inlineActions}>
+            {!config.single && (
+              <Button
+                variant="outline"
+                size="sm"
+                icon={<Copy aria-hidden="true" />}
+                disabled={form.dirty}
+                onClick={async () => {
+                  const copy = await actions.duplicate(row);
+                  if (copy) navigate(`/admin/secoes/${copy.id}`);
+                }}
+              >
+                Duplicar seção
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Trash2 aria-hidden="true" />}
+              onClick={async () => {
+                if (await actions.remove(row)) {
+                  form.reset(toForm(row));
+                  navigate('/admin/secoes');
+                }
+              }}
+            >
+              Excluir seção
+            </Button>
+          </div>
+          {form.dirty && !config.single && <p className={a.muted}>Salve as alterações antes de duplicar.</p>}
+        </section>
+      )}
     </>
   );
 }

@@ -123,3 +123,10 @@
     display: none;
   }
 }
+
+/* Sem logotipo cadastrado: o nome do negócio no lugar. */
+.brandName {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-text);
+}

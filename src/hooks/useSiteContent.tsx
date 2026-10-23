@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { defaultContent } from '../content/defaultContent';
-import { isPreviewMode, PREVIEW_STORAGE_KEY } from '../lib/preview';
+import { isPreviewMode, PREVIEW_STORAGE_KEY, PUBLISHED_STORAGE_KEY } from '../lib/preview';
 import { fetchPreviewContent, fetchSiteContent } from '../services/contentService';
 import type { SiteContent } from '../types/content';
 
@@ -61,7 +61,8 @@ export function SiteContentProvider({ children, loader = defaultLoader }: Provid
 
   useEffect(() => {
     if (!isPreviewMode()) return;
-    const onStorage = (e: StorageEvent) => e.key === PREVIEW_STORAGE_KEY && setDraftVersion((v) => v + 1);
+    const onStorage = (e: StorageEvent) =>
+      (e.key === PREVIEW_STORAGE_KEY || e.key === PUBLISHED_STORAGE_KEY) && setDraftVersion((v) => v + 1);
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);

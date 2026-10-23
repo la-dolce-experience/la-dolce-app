@@ -9,41 +9,70 @@ export interface ImageRef {
   height?: number;
 }
 
-export const SECTION_KEYS = [
+/** Tipos de seção que o site sabe desenhar (mesma lista do check em sections.type no banco). */
+export const SECTION_TYPES = [
   'hero',
-  'experience',
-  'events',
-  'flavors',
-  'personalization',
-  'steps',
-  'gallery',
-  'testimonials',
-  'quote',
-  'location',
+  'texto_imagem',
+  'cartoes',
+  'catalogo',
+  'destaques',
+  'etapas',
+  'galeria',
+  'depoimentos',
+  'formulario',
+  'contato',
   'faq',
 ] as const;
 
-export type SectionKey = (typeof SECTION_KEYS)[number];
+export type SectionType = (typeof SECTION_TYPES)[number];
+
+/** Opções específicas do tipo (lado da foto, campos do formulário...), gravadas em sections.options. */
+export type SectionOptions = Record<string, string | boolean>;
+
+/**
+ * Item da lista de uma seção. Cada tipo usa só alguns campos:
+ * cartões (title, description, label = opção no formulário), depoimentos (title = autor, label = contexto,
+ * description = texto, rating, image = foto de perfil, photos), FAQ (title = pergunta, description = resposta)...
+ */
+export interface SectionItem {
+  id: string;
+  title: string;
+  description: string;
+  label: string;
+  image: ImageRef | null;
+  /** Fotos extras (até 5), na ordem escolhida no painel. */
+  photos: ImageRef[];
+  /** Nota de 1 a 5 estrelas (depoimentos). */
+  rating: number;
+}
 
 export interface Section {
-  key: SectionKey;
+  id: string;
+  type: SectionType;
+  /** Âncora da seção no site (#slug). */
+  slug: string;
+  /** Item do menu do site ('' = fora do menu). */
+  navLabel: string;
   eyebrow: string;
   title: string;
   body: string;
   ctaLabel: string;
-  /** Texto curto auxiliar (ex.: nota ao lado do CTA no hero). */
+  /** Texto curto auxiliar (ex.: nota abaixo dos botões no destaque). */
   note: string;
-  /** Legenda sobreposta à imagem (ex.: selo do hero). */
+  /** Legenda sobreposta à imagem (ex.: selo do destaque). */
   imageCaption: string;
   image: ImageRef | null;
-  visible: boolean;
+  options: SectionOptions;
+  /** Itens visíveis, na ordem do site. */
+  items: SectionItem[];
 }
 
 export interface SiteSettings {
   businessName: string;
   footerTagline: string;
-  logo: ImageRef;
-  /** Somente dígitos, com DDI e DDD. Ex.: 5511920102743 */
+  /** Sem logotipo, o cabeçalho e o rodapé mostram o nome do negócio. */
+  logo: ImageRef | null;
+  /** Somente dígitos, com DDI e DDD. Ex.: 5511999999999 */
   whatsappNumber: string;
   whatsappGreeting: string;
   phone: string;
@@ -65,67 +94,8 @@ export interface SiteSettings {
   ogImage: ImageRef | null;
 }
 
-export interface EventType {
-  id: string;
-  title: string;
-  description: string;
-  /** Rótulo usado no campo "Tipo de evento" do formulário. */
-  formLabel: string;
-}
-
-export interface Feature {
-  id: string;
-  label: string;
-}
-
-export interface Step {
-  id: string;
-  title: string;
-  description: string;
-}
-
-export interface GalleryItem {
-  id: string;
-  image: ImageRef;
-  caption: string;
-}
-
-export interface Faq {
-  id: string;
-  question: string;
-  answer: string;
-}
-
-/** Sabor ou forma de servir (copinho, casquinha...). */
-export interface FlavorItem {
-  id: string;
-  title: string;
-  description: string;
-  image: ImageRef | null;
-}
-
-export interface Testimonial {
-  id: string;
-  author: string;
-  context: string;
-  quote: string;
-  /** Nota de 1 a 5 estrelas. */
-  rating: number;
-  /** Foto de perfil de quem deu o depoimento (opcional). */
-  image: ImageRef | null;
-  /** Fotos do evento (até 5), na ordem escolhida no painel. */
-  photos: ImageRef[];
-}
-
 export interface SiteContent {
   settings: SiteSettings;
-  sections: Record<SectionKey, Section>;
-  eventTypes: EventType[];
-  features: Feature[];
-  flavors: FlavorItem[];
-  presentations: FlavorItem[];
-  steps: Step[];
-  gallery: GalleryItem[];
-  faqs: Faq[];
-  testimonials: Testimonial[];
+  /** Seções visíveis, na ordem da página. */
+  sections: Section[];
 }

@@ -1,0 +1,210 @@
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    'handle index info'
+    'tools tools tools';
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-cream-soft);
+  transition:
+    box-shadow var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+@media (min-width: 900px) {
+  .row {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: 'handle index info badges tools';
+  }
+}
+
+.row:hover {
+  border-color: var(--color-brand-deep);
+}
+
+.hidden {
+  background: repeating-linear-gradient(-45deg, transparent 0 8px, rgba(33, 5, 19, 0.03) 8px 16px), #fff;
+}
+
+.hidden .name a {
+  color: var(--color-muted);
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.dropTarget {
+  border-color: var(--color-brand-deep);
+  box-shadow: 0 -3px 0 var(--color-brand-deep);
+}
+
+.handle {
+  grid-area: handle;
+  display: none;
+  color: var(--color-muted);
+  cursor: grab;
+}
+
+.handle svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Arrastar só faz sentido com mouse. */
+@media (hover: hover) and (pointer: fine) {
+  .handle {
+    display: grid;
+  }
+}
+
+.index {
+  grid-area: index;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.info {
+  grid-area: info;
+  min-width: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.name svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--color-brand-deep);
+}
+
+.name a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.name a:hover {
+  text-decoration: underline;
+}
+
+.meta {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.badges {
+  grid-area: badges;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.badges:empty {
+  display: none;
+}
+
+.tools {
+  grid-area: tools;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.iconBtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+.iconBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.iconBtn:hover:not(:disabled) {
+  border-color: var(--color-brand-deep);
+  color: var(--color-brand-deep);
+}
+
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.danger:hover:not(:disabled) {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+/* "+ Adicionar seção aqui": aparece entre as seções ao passar o mouse ou com o foco do teclado. */
+.insert {
+  position: absolute;
+  left: 50%;
+  bottom: calc(-1 * var(--space-4) - 13px);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 12px;
+  border: 1px dashed var(--color-brand-deep);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--color-brand-deep);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease);
+}
+
+.insert svg {
+  width: 14px;
+  height: 14px;
+}
+
+.row:hover .insert,
+.insert:focus-visible {
+  opacity: 1;
+}
+
+/* Sem mouse (celular), o botão fica sempre visível. */
+@media (hover: none) {
+  .insert {
+    opacity: 1;
+  }
+}

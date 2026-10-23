@@ -3,51 +3,73 @@ import { ButtonLink } from '../../components/Button/Button';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import type { Section } from '../../types/content';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import { formAnchor, opt } from './sectionHelpers';
 import styles from './Sections.module.css';
 
-export function HeroSection() {
+/** Destaque principal: título da página (h1), botões e foto. */
+export function HeroSection({ section }: { section: Section }) {
   const { content } = useSiteContent();
-  const { hero } = content.sections;
   const { settings } = content;
+  const whatsappUrl = buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting);
+  const form = formAnchor(content);
+  const whatsappLabel = opt(section, 'whatsappLabel');
+  const headingId = `${section.slug}-title`;
 
   return (
-    <section className={styles.hero} aria-labelledby="hero-title">
+    <section id={section.slug} className={styles.hero} aria-labelledby={headingId}>
       <div className={`container ${styles.heroGrid}`}>
         <div className={styles.heroText}>
-          {hero.eyebrow && <p className={styles.eyebrow}>{hero.eyebrow}</p>}
-          <h1 id="hero-title" className={styles.heroTitle}>
-            {hero.title}
+          {section.eyebrow && <p className={styles.eyebrow}>{section.eyebrow}</p>}
+          <h1 id={headingId} className={styles.heroTitle}>
+            {section.title}
           </h1>
-          {hero.body && <p className={`${styles.lead} prewrap`}>{hero.body}</p>}
+          {section.body && <p className={`${styles.lead} prewrap`}>{section.body}</p>}
           <div className={styles.heroActions}>
-            <ButtonLink href="#orcamento" size="lg">
-              {hero.ctaLabel || 'Solicitar orçamento'}
-            </ButtonLink>
-            <ButtonLink
-              href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
-              data-wa-origem="destaque"
-              target="_blank"
-              rel="noopener noreferrer"
-              variant="outline"
-              size="lg"
-              icon={<WhatsAppIcon />}
-            >
-              Tirar dúvidas no WhatsApp
-            </ButtonLink>
+            {/* Sem formulário na página, o botão principal leva direto ao WhatsApp. */}
+            {form ? (
+              <ButtonLink href={form} size="lg">
+                {section.ctaLabel || 'Fale conosco'}
+              </ButtonLink>
+            ) : (
+              <ButtonLink
+                href={whatsappUrl}
+                data-wa-origem={section.slug}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="lg"
+                icon={<WhatsAppIcon />}
+              >
+                {section.ctaLabel || 'Fale conosco'}
+              </ButtonLink>
+            )}
+            {form && whatsappLabel && (
+              <ButtonLink
+                href={whatsappUrl}
+                data-wa-origem={section.slug}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="outline"
+                size="lg"
+                icon={<WhatsAppIcon />}
+              >
+                {whatsappLabel}
+              </ButtonLink>
+            )}
           </div>
-          {hero.note && (
+          {section.note && (
             <p className={styles.heroNote}>
               <MapPin aria-hidden="true" />
-              {hero.note}
+              {section.note}
             </p>
           )}
         </div>
 
-        {hero.image && (
+        {section.image && (
           <figure className={styles.heroCard}>
-            <ResponsiveImage image={hero.image} priority sizes="(min-width: 960px) 620px, 100vw" />
-            {hero.imageCaption && <figcaption className={styles.badge}>{hero.imageCaption}</figcaption>}
+            <ResponsiveImage image={section.image} priority sizes="(min-width: 960px) 620px, 100vw" />
+            {section.imageCaption && <figcaption className={styles.badge}>{section.imageCaption}</figcaption>}
           </figure>
         )}
       </div>

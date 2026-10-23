@@ -15,6 +15,7 @@ import { LoginPage } from './pages/LoginPage';
 import { MediaPage } from './pages/MediaPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SectionPage } from './pages/SectionPage';
+import { SectionsPage } from './pages/SectionsPage';
 import { SeoPage } from './pages/SeoPage';
 import { TrashPage } from './pages/TrashPage';
 import authStyles from './pages/AuthPages.module.css';
@@ -96,7 +97,8 @@ export default function AdminApp() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route path="secoes/:key" element={<SectionPage />} />
+            <Route path="secoes" element={<SectionsPage />} />
+            <Route path="secoes/:id" element={<SectionPage />} />
             <Route path="contato" element={<ContactPage />} />
             <Route path="seo" element={<SeoPage />} />
             <Route path="imagens" element={<MediaPage />} />

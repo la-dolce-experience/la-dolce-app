@@ -4,6 +4,7 @@ import { getEventsSummary, type EventSummaryRow } from '../../../services/adminS
 import { toFriendlyError } from '../../../services/errors';
 import a from '../admin.module.css';
 import { summarize } from '../metricsSummary';
+import { useSections } from '../SectionsContext';
 import styles from './MetricsPanel.module.css';
 
 const PERIODS = [7, 30, 90] as const;
@@ -29,7 +30,13 @@ export function MetricsPanel() {
     };
   }, []);
 
-  const summary = useMemo(() => (rows ? summarize(rows, period) : null), [rows, period]);
+  const { sections } = useSections();
+  // Cliques nos botões das seções vêm com o endereço (slug) da seção: o painel mostra o nome.
+  const summary = useMemo(() => {
+    if (!rows) return null;
+    const names = Object.fromEntries((sections ?? []).map((s) => [s.slug, s.name]));
+    return summarize(rows, period, undefined, names);
+  }, [rows, period, sections]);
   const max = summary ? Math.max(1, ...summary.days.map((d) => Math.max(d.visits, d.clicks))) : 1;
 
   return (

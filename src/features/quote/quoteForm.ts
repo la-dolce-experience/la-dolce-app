@@ -5,9 +5,10 @@ export interface QuoteFormValues {
   name: string;
   phone: string;
   email: string;
-  eventType: string;
-  eventDate: string;
-  guests: string;
+  /** Assunto escolhido entre os cartões (ver formSubjects). */
+  subject: string;
+  date: string;
+  quantity: string;
   location: string;
   details: string;
   /** Honeypot: campo invisível que pessoas reais não preenchem. */
@@ -20,23 +21,23 @@ export const emptyQuoteForm: QuoteFormValues = {
   name: '',
   phone: '',
   email: '',
-  eventType: '',
-  eventDate: '',
-  guests: '',
+  subject: '',
+  date: '',
+  quantity: '',
   location: '',
   details: '',
   website: '',
 };
 
-/** Opção sempre presente no campo "Tipo de evento". */
-export const OTHER_EVENT_TYPE = 'Outros';
+/** Opção sempre presente no campo "Assunto" quando ele aparece. */
+export const OTHER_SUBJECT = 'Outros';
 
 export const QUOTE_LIMITS = {
   name: 80,
   email: 120,
   location: 120,
   details: 1000,
-  maxGuests: 100000,
+  maxQuantity: 100000,
 } as const;
 
 /** Remove caracteres de controle (exceto quebra de linha) e espaços repetidos. */
@@ -64,17 +65,17 @@ export function todayIso(now = new Date()): string {
 
 export type QuoteValidation = { ok: true; data: QuoteMessageData } | { ok: false; errors: QuoteFormErrors };
 
-export function validateQuoteForm(
-  values: QuoteFormValues,
-  allowedEventTypes: string[],
-  now = new Date(),
-): QuoteValidation {
+/**
+ * Valida o formulário. `subjects` são as opções do campo "Assunto": sem opções, o campo não aparece
+ * e não é obrigatório. Campos opcionais só são validados quando preenchidos.
+ */
+export function validateQuoteForm(values: QuoteFormValues, subjects: string[], now = new Date()): QuoteValidation {
   const errors: QuoteFormErrors = {};
   const name = sanitizeText(values.name);
   const email = sanitizeText(values.email).toLowerCase();
   const location = sanitizeText(values.location);
   const details = sanitizeText(values.details, { multiline: true });
-  const guests = values.guests.trim();
+  const quantity = values.quantity.trim();
 
   if (name.length < 2) errors.name = 'Informe seu nome.';
   else if (name.length > QUOTE_LIMITS.name) errors.name = `Use no máximo ${QUOTE_LIMITS.name} caracteres.`;
@@ -87,18 +88,20 @@ export function validateQuoteForm(
     errors.email = 'E-mail inválido. Deixe em branco se preferir.';
   }
 
-  if (!values.eventType) errors.eventType = 'Selecione o tipo de evento.';
-  else if (!allowedEventTypes.includes(values.eventType)) errors.eventType = 'Selecione uma opção da lista.';
-
-  if (values.eventDate) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.eventDate)) errors.eventDate = 'Data inválida.';
-    else if (values.eventDate < todayIso(now)) errors.eventDate = 'A data do evento já passou.';
+  if (subjects.length > 0) {
+    if (!values.subject) errors.subject = 'Selecione uma opção.';
+    else if (!subjects.includes(values.subject)) errors.subject = 'Selecione uma opção da lista.';
   }
 
-  if (guests) {
-    const n = Number(guests);
-    if (!Number.isInteger(n) || n < 1 || n > QUOTE_LIMITS.maxGuests) {
-      errors.guests = 'Informe um número inteiro de convidados (ex.: 120).';
+  if (values.date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(values.date)) errors.date = 'Data inválida.';
+    else if (values.date < todayIso(now)) errors.date = 'Essa data já passou.';
+  }
+
+  if (quantity) {
+    const n = Number(quantity);
+    if (!Number.isInteger(n) || n < 1 || n > QUOTE_LIMITS.maxQuantity) {
+      errors.quantity = 'Informe um número inteiro (ex.: 120).';
     }
   }
 
@@ -113,9 +116,9 @@ export function validateQuoteForm(
       name,
       phone: phone!,
       email: email || undefined,
-      eventType: values.eventType,
-      eventDate: values.eventDate || undefined,
-      guests: guests ? String(Number(guests)) : undefined,
+      subject: subjects.length > 0 ? values.subject : undefined,
+      date: values.date || undefined,
+      quantity: quantity ? String(Number(quantity)) : undefined,
       location: location || undefined,
       details: details || undefined,
     },

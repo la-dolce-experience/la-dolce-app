@@ -3,41 +3,47 @@ import { ButtonLink } from '../../components/Button/Button';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import type { Section } from '../../types/content';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { useQuoteIntent } from '../quote/QuoteIntentContext';
+import { formAnchor, opt } from './sectionHelpers';
 import styles from './Sections.module.css';
 
-export function EventsSection() {
+/** "Cartões": cada cartão com rótulo vira opção do formulário e ganha o link "Pedir orçamento para ...". */
+export function CardsSection({ section }: { section: Section }) {
   const { content } = useSiteContent();
   const { requestQuote } = useQuoteIntent();
-  const section = content.sections.events;
-  if (!section.visible || content.eventTypes.length === 0) return null;
+  const form = formAnchor(content);
+  const linkLabel = opt(section, 'linkLabel');
+  const headingId = `${section.slug}-title`;
 
   return (
-    <section id="eventos" className={styles.section} aria-labelledby="events-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className="container">
         <SectionHeading
-          id="events-title"
+          id={headingId}
           align="center"
           eyebrow={section.eyebrow}
           title={section.title}
           body={section.body}
         />
         <ul className={styles.cards}>
-          {content.eventTypes.map((event) => (
-            <li key={event.id} className={styles.card}>
-              <h3>{event.title}</h3>
-              {event.description && <p className="prewrap">{event.description}</p>}
-              <a href="#orcamento" className={styles.cardLink} onClick={() => requestQuote(event.formLabel)}>
-                Pedir orçamento para {event.formLabel.toLowerCase()}
-                <ArrowRight aria-hidden="true" />
-              </a>
+          {section.items.map((card) => (
+            <li key={card.id} className={styles.card}>
+              <h3>{card.title}</h3>
+              {card.description && <p className="prewrap">{card.description}</p>}
+              {form && linkLabel && card.label && (
+                <a href={form} className={styles.cardLink} onClick={() => requestQuote(card.label)}>
+                  {linkLabel} para {card.label.toLowerCase()}
+                  <ArrowRight aria-hidden="true" />
+                </a>
+              )}
             </li>
           ))}
         </ul>
-        {section.ctaLabel && (
+        {section.ctaLabel && form && (
           <div className={styles.center}>
-            <ButtonLink href="#orcamento" variant="dark">
+            <ButtonLink href={form} variant="dark">
               {section.ctaLabel}
             </ButtonLink>
           </div>
@@ -47,29 +53,29 @@ export function EventsSection() {
   );
 }
 
-export function PersonalizationSection() {
+/** "Destaques": faixa de contraste com a lista de diferenciais e o botão do WhatsApp. */
+export function HighlightsSection({ section }: { section: Section }) {
   const { content } = useSiteContent();
-  const section = content.sections.personalization;
   const { settings } = content;
-  if (!section.visible) return null;
+  const headingId = `${section.slug}-title`;
 
   return (
-    <section className={styles.section} aria-labelledby="personalization-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className={`container ${styles.band}`}>
         <div className={styles.bandInner}>
           <SectionHeading
-            id="personalization-title"
+            id={headingId}
             tone="inverse"
             eyebrow={section.eyebrow}
             title={section.title}
             body={section.body}
           />
-          {content.features.length > 0 && (
+          {section.items.length > 0 && (
             <ul className={styles.features}>
-              {content.features.map((f) => (
+              {section.items.map((f) => (
                 <li key={f.id} className={styles.feature}>
                   <Check aria-hidden="true" />
-                  {f.label}
+                  {f.title}
                 </li>
               ))}
             </ul>
@@ -78,7 +84,7 @@ export function PersonalizationSection() {
             <ButtonLink
               variant="light"
               href={buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting)}
-              data-wa-origem="personalizacao"
+              data-wa-origem={section.slug}
               target="_blank"
               rel="noopener noreferrer"
               icon={<WhatsAppIcon />}
@@ -92,23 +98,21 @@ export function PersonalizationSection() {
   );
 }
 
-export function StepsSection() {
-  const { content } = useSiteContent();
-  const section = content.sections.steps;
-  if (!section.visible || content.steps.length === 0) return null;
-
+/** "Etapas": passo a passo numerado. */
+export function StepsSection({ section }: { section: Section }) {
+  const headingId = `${section.slug}-title`;
   return (
-    <section id="como-funciona" className={styles.section} aria-labelledby="steps-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className="container">
         <SectionHeading
-          id="steps-title"
+          id={headingId}
           align="center"
           eyebrow={section.eyebrow}
           title={section.title}
           body={section.body}
         />
         <ol className={styles.steps}>
-          {content.steps.map((step) => (
+          {section.items.map((step) => (
             <li key={step.id} className={styles.step}>
               <h3>{step.title}</h3>
               {step.description && <p className="prewrap">{step.description}</p>}
@@ -120,29 +124,27 @@ export function StepsSection() {
   );
 }
 
-export function FaqSection() {
-  const { content } = useSiteContent();
-  const section = content.sections.faq;
-  if (!section.visible || content.faqs.length === 0) return null;
-
+/** "Perguntas frequentes": cada pergunta abre a resposta. */
+export function FaqSection({ section }: { section: Section }) {
+  const headingId = `${section.slug}-title`;
   return (
-    <section id="duvidas" className={styles.section} aria-labelledby="faq-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className="container">
         <SectionHeading
-          id="faq-title"
+          id={headingId}
           align="center"
           eyebrow={section.eyebrow}
           title={section.title}
           body={section.body}
         />
         <div className={styles.faqList}>
-          {content.faqs.map((faq) => (
+          {section.items.map((faq) => (
             <details key={faq.id} className={styles.faqItem}>
               <summary>
-                {faq.question}
+                {faq.title}
                 <ChevronDown aria-hidden="true" />
               </summary>
-              <p className="prewrap">{faq.answer}</p>
+              <p className="prewrap">{faq.description}</p>
             </details>
           ))}
         </div>
