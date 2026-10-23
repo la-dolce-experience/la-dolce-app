@@ -2,17 +2,11 @@ import { useEffect } from 'react';
 import { PreviewBanner } from '../components/PreviewBanner/PreviewBanner';
 import { WhatsAppFloat } from '../components/WhatsAppFloat/WhatsAppFloat';
 import { QuoteIntentProvider } from '../features/quote/QuoteIntentContext';
-import { QuoteSection } from '../features/quote/QuoteSection';
-import { EventsSection, FaqSection, PersonalizationSection, StepsSection } from '../features/site/ContentSections';
-import { FlavorsSection } from '../features/site/FlavorsSection';
 import { Footer } from '../features/site/Footer';
-import { GallerySection } from '../features/site/GallerySection';
 import { Header } from '../features/site/Header';
-import { HeroSection } from '../features/site/HeroSection';
-import { LocationSection } from '../features/site/LocationSection';
-import { SplitSection } from '../features/site/SplitSection';
+import { findSection } from '../features/site/sectionHelpers';
+import { SectionList } from '../features/site/SectionRenderer';
 import { StructuredData } from '../features/site/StructuredData';
-import { TestimonialsSection } from '../features/site/TestimonialsSection';
 import { useDocumentMeta } from '../hooks/useDocumentMeta';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { listenWhatsAppClicks, trackVisit } from '../lib/metrics';
@@ -61,23 +55,13 @@ export function HomePage() {
         aria-busy={status === 'loading'}
       >
         <span id="inicio" />
-        <HeroSection />
-        <SplitSection id="experiencia" section={sections.experience} />
-        <EventsSection />
-        <FlavorsSection />
-        <PersonalizationSection />
-        <StepsSection />
-        <GallerySection />
-        <TestimonialsSection />
-        <QuoteSection />
-        <LocationSection />
-        <FaqSection />
+        <SectionList sections={sections} />
       </main>
       <Footer />
       <WhatsAppFloat
         number={settings.whatsappNumber}
         greeting={settings.whatsappGreeting}
-        hideWhenVisibleId="orcamento"
+        hideWhenVisibleId={findSection(content, 'formulario')?.slug}
       />
       <StructuredData content={content} siteUrl={SITE_URL} />
     </QuoteIntentProvider>

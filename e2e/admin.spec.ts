@@ -86,8 +86,14 @@ test.describe('Tour guiado e ajuda', () => {
         return !!s && !!t && contains(s, t);
       })
       .toBe(true);
-    const [card, t] = await Promise.all([page.getByRole('dialog').boundingBox(), target.boundingBox()]);
-    expect(coveredFraction(card!, t!)).toBeLessThanOrEqual(0.1);
+    // Com o menu lateral mais alto que a tela, a rolagem suave até o elemento leva um instante: o balão
+    // se reposiciona quando ela termina.
+    await expect
+      .poll(async () => {
+        const [card, t] = await Promise.all([page.getByRole('dialog').boundingBox(), target.boundingBox()]);
+        return coveredFraction(card!, t!);
+      })
+      .toBeLessThanOrEqual(0.1);
   }
 
   test('primeiro acesso: percorre o painel abrindo cada tela e não volta depois de concluído', async ({ page }) => {
@@ -120,7 +126,7 @@ test.describe('Tour guiado e ajuda', () => {
     const dialog = page.getByRole('dialog');
     const next = page.getByRole('button', { name: 'Próximo' });
     await expect(dialog).toHaveAccessibleName('Boas-vindas ao painel');
-    await expect(dialog).toContainText('Passo 1 de 21');
+    await expect(dialog).toContainText('Passo 1 de 23');
     // Durante o tour, o restante do painel fica bloqueado para teclado e mouse.
     await expect(page.locator('#admin-main')).toHaveAttribute('inert', '');
     await expect(page.locator('#admin-sidebar')).toHaveAttribute('inert', '');
@@ -139,56 +145,51 @@ test.describe('Tour guiado e ajuda', () => {
     await expect(dialog).toHaveAccessibleName('O site, parte por parte');
     await expectSpotlightOn(page, '[data-tour="nav-sections"]');
 
-    await next.click();
-    await expect(page).toHaveURL(/\/admin\/secoes\/hero$/);
-    await expect(dialog).toHaveAccessibleName('Textos e fotos');
-    await expectSpotlightOn(page, '[data-tour="image-picker"]');
-
-    await next.click();
-    await expect(dialog).toHaveAccessibleName('Pré-visualização ao vivo');
-    await expectSpotlightOn(page, '[data-tour="preview-open"]');
-
-    await next.click();
-    await expect(dialog).toHaveAccessibleName('Salvar ou descartar');
-    await expectSpotlightOn(page, '[data-tour="save-bar"]');
-
-    await next.click();
-    await expect(dialog).toHaveAccessibleName('Conferir no site');
-    await expectSpotlightOn(page, '[data-tour="view-site"]');
-
-    await next.click();
-    await expect(page).toHaveURL(/\/admin\/secoes\/events$/);
-    await expect(dialog).toHaveAccessibleName('Listas: adicionar itens');
-    await expectSpotlightOn(page, '[data-tour="list-add"]');
-
-    // Voltar também volta para a tela do passo anterior.
-    await page.getByRole('button', { name: 'Voltar' }).click();
-    await expect(page).toHaveURL(/\/admin\/secoes\/hero$/);
-    await expect(dialog).toHaveAccessibleName('Conferir no site');
-    await next.click();
-    await expect(dialog).toHaveAccessibleName('Listas: adicionar itens');
-
+    const sectionUrl = /\/admin\/secoes\/[0-9a-f-]{36}$/;
     for (const [url, name, selector] of [
-      ['/admin/secoes/events', 'Ordenar, ocultar e excluir', '[data-tour="list-item"]'],
-      ['/admin/secoes/flavors', 'Sabores e apresentações', '[data-tour="list-sabor"]'],
-      ['/admin/secoes/gallery', 'Galeria de fotos', '[data-tour="list-gallery_items"]'],
-      ['/admin/secoes/testimonials', 'Depoimentos', '[data-tour="list-testimonials"]'],
-      ['/admin/secoes/quote', 'Formulário de orçamento', '[data-tour="section-form"]'],
-      ['/admin/secoes/location', 'Atendimento e localização', '[data-tour="location"]'],
-      ['/admin/imagens', 'Biblioteca de imagens', '[data-tour="media-upload"]'],
-      ['/admin/contato', 'WhatsApp e contatos', '[data-tour="whatsapp"]'],
-      ['/admin/seo', 'Google e compartilhamento', '[data-tour="seo"]'],
-      ['/admin/lixeira', 'Lixeira e cópia de segurança', '[data-tour="trash"]'],
-      ['/admin/conta', 'Sua conta', '[data-tour="password"]'],
-      ['/admin', 'Precisa de ajuda?', '[data-tour="help"]'],
-    ]) {
+      [/\/admin\/secoes$/, 'Monte a página', '[data-tour="sections-order"]'],
+      [/\/admin\/secoes$/, 'Adicionar seções', '[data-tour="sections-add"]'],
+      [sectionUrl, 'Textos e fotos', '[data-tour="image-picker"]'],
+      [sectionUrl, 'Pré-visualização ao vivo', '[data-tour="preview-open"]'],
+      [sectionUrl, 'Salvar ou descartar', '[data-tour="save-bar"]'],
+      [sectionUrl, 'Nome, menu e endereço', '[data-tour="section-identity"]'],
+      [sectionUrl, 'Listas: adicionar itens', '[data-tour="list-add"]'],
+    ] as const) {
       await next.click();
-      await expect(page).toHaveURL(new RegExp(`${url}$`));
+      await expect(page).toHaveURL(url);
       await expect(dialog).toHaveAccessibleName(name);
       await expectSpotlightOn(page, selector);
     }
 
-    await expect(dialog).toContainText('Passo 21 de 21');
+    // Voltar também volta para a tela do passo anterior.
+    const listUrl = page.url();
+    await page.getByRole('button', { name: 'Voltar' }).click();
+    await expect(dialog).toHaveAccessibleName('Nome, menu e endereço');
+    await expect(page).not.toHaveURL(listUrl);
+    await next.click();
+    await expect(dialog).toHaveAccessibleName('Listas: adicionar itens');
+
+    for (const [url, name, selector] of [
+      [sectionUrl, 'Ordenar, ocultar e excluir', '[data-tour="list-item"]'],
+      [sectionUrl, 'Sabores e apresentações', '[data-tour="list-catalogo"]'],
+      [sectionUrl, 'Galeria de fotos', '[data-tour="list-galeria"]'],
+      [sectionUrl, 'Depoimentos', '[data-tour="list-depoimentos"]'],
+      [sectionUrl, 'Formulário de orçamento', '[data-tour="section-options"]'],
+      [sectionUrl, 'Atendimento e localização', '[data-tour="location"]'],
+      [/\/admin\/imagens$/, 'Biblioteca de imagens', '[data-tour="media-upload"]'],
+      [/\/admin\/contato$/, 'WhatsApp e contatos', '[data-tour="whatsapp"]'],
+      [/\/admin\/seo$/, 'Google e compartilhamento', '[data-tour="seo"]'],
+      [/\/admin\/lixeira$/, 'Lixeira e cópia de segurança', '[data-tour="trash"]'],
+      [/\/admin\/conta$/, 'Sua conta', '[data-tour="password"]'],
+      [/\/admin$/, 'Precisa de ajuda?', '[data-tour="help"]'],
+    ] as const) {
+      await next.click();
+      await expect(page).toHaveURL(url);
+      await expect(dialog).toHaveAccessibleName(name);
+      await expectSpotlightOn(page, selector);
+    }
+
+    await expect(dialog).toContainText('Passo 23 de 23');
     const saved = waitForGuideSaved(page);
     await page.getByRole('button', { name: 'Concluir' }).click();
     await saved;
@@ -229,9 +230,7 @@ test.describe('Tour guiado e ajuda', () => {
     await expectSpotlightOn(page, '[data-tour="menu-button"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
 
-    await next.click();
-    await next.click();
-    await next.click();
+    for (let i = 0; i < 5; i++) await next.click();
     await expect(dialog).toHaveAccessibleName('Salvar ou descartar');
     await expectSpotlightOn(page, '[data-tour="save-bar"]');
     await expect(dialog).toBeInViewport({ ratio: 1 });
@@ -239,11 +238,24 @@ test.describe('Tour guiado e ajuda', () => {
   });
 });
 
+/** Abre o editor de uma seção pelo menu lateral (o endereço tem o id da seção). */
+async function openSection(page: Page, name: string) {
+  await page.getByRole('navigation', { name: 'Painel' }).getByRole('link', { name, exact: true }).click();
+  await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+  await expect(page.locator('#section-title')).toBeVisible();
+}
+
+/** Linha de uma seção na tela "Seções da página". */
+const sectionRow = (page: Page, name: string) => page.locator('li[id^="section-row-"]', { hasText: name });
+
+/** Nomes das seções, na ordem da tela "Seções da página". */
+const sectionNames = (page: Page) => page.locator('li[id^="section-row-"] p:first-child a').allInnerTexts();
+
 test.describe('Edição de conteúdo', () => {
   test.beforeEach(async ({ page }) => login(page));
 
   test('editar o destaque principal reflete no site e persiste', async ({ page, context }) => {
-    await page.getByRole('link', { name: 'Destaque principal' }).first().click();
+    await openSection(page, 'Destaque principal');
     const title = page.locator('#section-title');
     const original = await title.inputValue();
     const edited = `${original} (e2e)`;
@@ -251,7 +263,7 @@ test.describe('Edição de conteúdo', () => {
     await title.fill(edited);
     await expect(page.getByText('Alterações não salvas')).toBeVisible();
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
-    await expect(page.getByText('Seção salva')).toBeVisible();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
 
     const site = await context.newPage();
     await site.goto('/');
@@ -262,54 +274,58 @@ test.describe('Edição de conteúdo', () => {
 
     await page.locator('#section-title').fill(original);
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
-    await expect(page.getByText('Seção salva')).toBeVisible();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
     await site.reload();
     await expect(site.getByRole('heading', { level: 1 })).toHaveText(original);
   });
 
-  test('título vazio não é salvo', async ({ page }) => {
-    await page.goto('/admin/secoes/experience');
+  test('título vazio e endereço inválido não são salvos', async ({ page }) => {
+    await openSection(page, 'Experiência');
     await page.locator('#section-title').fill('');
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
     await expect(page.getByText('O título não pode ficar vazio.')).toBeVisible();
     await expect(page.locator('#section-title')).toBeFocused();
+    await page.getByRole('button', { name: 'Descartar' }).click();
+
+    await page.locator('#section-slug').fill('eventos');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Outra seção já usa este endereço.')).toBeVisible();
+    await page.getByRole('button', { name: 'Descartar' }).click();
   });
 
   test('aviso de alterações não salvas ao sair da página', async ({ page }) => {
-    await page.goto('/admin/secoes/quote');
+    await openSection(page, 'Formulário de orçamento');
     await page.locator('#section-title').fill('Rascunho não salvo');
     await page.getByRole('link', { name: 'Contato e marca' }).click();
     const dialog = page.getByRole('dialog', { name: 'Sair sem salvar?' });
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Continuar editando' }).click();
-    await expect(page).toHaveURL(/secoes\/quote$/);
     await expect(page.locator('#section-title')).toHaveValue('Rascunho não salvo');
     await page.getByRole('button', { name: 'Descartar' }).click();
   });
 
   test('criar, editar e excluir pergunta frequente (reflete no site)', async ({ page, context }) => {
-    await page.goto('/admin/secoes/faq');
+    await openSection(page, 'Perguntas frequentes');
     const addButtons = page.getByRole('button', { name: 'Adicionar pergunta' });
     await addButtons.first().click();
     // O rascunho entra no fim da lista, aparece na tela e recebe o foco.
-    const question = page.locator('input[id$="-question"]').last();
+    const question = page.locator('input[id$="-title"]').last();
     await expect(question).toBeFocused();
     await expect(question).toBeInViewport();
-    await expect(page.locator('li', { has: question })).toContainText('Rascunho');
-    // Com itens na lista, há também um botão de adicionar no fim dela.
+    await expect(page.locator('ol > li').last()).toContainText('Rascunho');
     await expect(addButtons).toHaveCount(2);
-    await question.fill('Vocês levam a máquina? (e2e)');
-    await page.locator('textarea[id$="-answer"]').last().fill('Sim, levamos toda a estação.');
+    await question.fill('Vocês atendem aos sábados? (e2e)');
+    await page.locator('textarea[id$="-description"]').last().fill('Sim, com agendamento.');
     await page.getByRole('button', { name: 'Salvar pergunta' }).click();
     await expect(page.getByText('Pergunta adicionado(a).')).toBeVisible();
 
     const site = await context.newPage();
     await site.goto('/#duvidas');
-    await expect(site.getByText('Vocês levam a máquina? (e2e)')).toBeVisible();
+    await expect(site.getByText('Vocês atendem aos sábados? (e2e)')).toBeVisible();
 
     await page.reload();
-    const card = page.locator('li', { hasText: 'Vocês levam a máquina? (e2e)' });
-    await card.locator('textarea').fill('Sim, levamos a estação completa.');
+    const card = page.locator('li', { has: page.locator('input[value="Vocês atendem aos sábados? (e2e)"]') });
+    await card.locator('textarea').fill('Sim, das 9h às 13h.');
     await card.getByRole('button', { name: 'Salvar', exact: true }).click();
     await expect(page.getByText('Alterações salvas.')).toBeVisible();
 
@@ -317,29 +333,21 @@ test.describe('Edição de conteúdo', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Excluir' }).click();
     await expect(page.getByText('Pergunta excluído(a).')).toBeVisible();
     await site.reload();
-    await expect(site.getByText('Vocês levam a máquina? (e2e)')).toHaveCount(0);
+    await expect(site.getByText('Vocês atendem aos sábados? (e2e)')).toHaveCount(0);
+
+    // Limpeza: apaga da lixeira de vez (inclusive sobras de execuções anteriores).
+    await page.goto('/admin/lixeira');
+    await expect(page.locator('#admin-main li', { hasText: 'Vocês atendem aos sábados? (e2e)' }).first()).toBeVisible();
+    const leftover = page.getByRole('button', { name: 'Excluir definitivamente “Vocês atendem aos sábados? (e2e)”' });
+    for (let n = await leftover.count(); n > 0; n--) {
+      await leftover.first().click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+      await expect(leftover).toHaveCount(n - 1);
+    }
   });
 
-  test('novo tipo de evento entra no fim da lista e a tela rola até ele', async ({ page }) => {
-    await page.goto('/admin/secoes/events');
-    const cards = page.locator('ol > li');
-    await expect(cards.first()).toBeVisible();
-    const before = await cards.count();
-
-    await page.getByRole('button', { name: 'Adicionar tipo de evento' }).first().click();
-    await expect(cards).toHaveCount(before + 1);
-    const draft = cards.last();
-    await expect(draft).toContainText('Rascunho');
-    await expect(draft).toContainText(String(before + 1)); // numeração = posição no site
-    await expect(draft.locator('input[id$="-title"]')).toBeFocused();
-    await expect(draft.locator('input[id$="-title"]')).toBeInViewport();
-
-    await draft.getByRole('button', { name: 'Descartar' }).click();
-    await expect(cards).toHaveCount(before);
-  });
-
-  test('reordenar diferenciais', async ({ page }) => {
-    await page.goto('/admin/secoes/personalization');
+  test('reordenar itens de uma lista', async ({ page }) => {
+    await openSection(page, 'Personalização');
     const headings = page.locator('ol li h3');
     await expect(headings.first()).toBeVisible();
     const before = await headings.allInnerTexts();
@@ -350,12 +358,43 @@ test.describe('Edição de conteúdo', () => {
     await expect(page.getByText('Ordem atualizada.')).toBeVisible();
     const after = await headings.allInnerTexts();
     expect(after[1]).toContain(before[0].replace(/^\d+\s*/, ''));
+    // O foco acompanha o item movido, na mesma seta (teclado).
+    await expect(
+      page
+        .locator('ol li')
+        .nth(1)
+        .getByRole('button', { name: /para baixo/ }),
+    ).toBeFocused();
     await page
       .locator('ol li')
       .nth(1)
       .getByRole('button', { name: /para cima/ })
       .click();
     await expect.poll(async () => (await headings.allInnerTexts()).join('|')).toBe(before.join('|'));
+  });
+
+  test('o formulário mostra só os campos ligados no painel', async ({ page, context }) => {
+    await openSection(page, 'Formulário de orçamento');
+    const label = page.locator('#section-option-quantityLabel');
+    const original = await label.inputValue();
+    await page.getByLabel('Pedir uma quantidade').uncheck();
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+
+    const site = await context.newPage();
+    await site.goto('/#orcamento');
+    await expect(site.locator('#orcamento form').getByLabel(/convidados/)).toHaveCount(0);
+
+    await page.getByLabel('Pedir uma quantidade').check();
+    await label.fill('Quantas pessoas e2e');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+    await site.reload();
+    await expect(site.locator('#orcamento form').getByLabel(/Quantas pessoas e2e/)).toBeVisible();
+
+    await label.fill(original);
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
   });
 
   test('WhatsApp inválido é recusado com mensagem clara', async ({ page }) => {
@@ -370,10 +409,184 @@ test.describe('Edição de conteúdo', () => {
   });
 });
 
+test.describe('Seções da página', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+    await page.getByRole('link', { name: 'Seções e ordem' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Seções da página' })).toBeVisible();
+    await expect(sectionRow(page, 'Destaque principal')).toBeVisible();
+  });
+
+  test('mudar a ordem com as setas reflete no site e no menu do painel', async ({ page, context }) => {
+    const before = await sectionNames(page);
+    const i = before.indexOf('Experiência');
+    await sectionRow(page, 'Experiência').getByRole('button', { name: 'Mover “Experiência” para baixo' }).click();
+    await expect(page.getByText('Ordem atualizada.', { exact: false })).toBeVisible();
+    await expect
+      .poll(() => sectionNames(page))
+      .toEqual([...before.slice(0, i), before[i + 1], 'Experiência', ...before.slice(i + 2)]);
+    // O foco acompanha a seção movida, na mesma seta (teclado).
+    await expect(
+      sectionRow(page, 'Experiência').getByRole('button', { name: 'Mover “Experiência” para baixo' }),
+    ).toBeFocused();
+
+    const sidebar = await page
+      .getByRole('navigation', { name: 'Painel' })
+      .locator('[aria-labelledby="nav-home"] a')
+      .allInnerTexts();
+    expect(sidebar.slice(1).map((t) => t.replace(/oculta$/, '').trim())).toEqual(await sectionNames(page));
+
+    // O site segue a mesma ordem (seções de lista vazias não aparecem).
+    const slugs = await page
+      .locator('li[id^="section-row-"] p:nth-child(2)')
+      .allInnerTexts()
+      .then((metas) => metas.map((m) => m.split('#').pop()!.trim()));
+    const site = await context.newPage();
+    await site.goto('/');
+    // A página abre com o HTML do último build e se atualiza com o banco logo em seguida.
+    await expect
+      .poll(async () => {
+        const ids = await site.locator('main > section[id]').evaluateAll((els) => els.map((e) => e.id));
+        return JSON.stringify(ids) === JSON.stringify(slugs.filter((slug) => ids.includes(slug)));
+      })
+      .toBe(true);
+
+    // Volta à ordem original.
+    await sectionRow(page, 'Experiência').getByRole('button', { name: 'Mover “Experiência” para cima' }).click();
+    await expect.poll(() => sectionNames(page)).toEqual(before);
+  });
+
+  test('arrastar uma seção muda a ordem', async ({ page }) => {
+    const before = await sectionNames(page);
+    await sectionRow(page, before[3]).dragTo(sectionRow(page, before[1]));
+    await expect
+      .poll(() => sectionNames(page))
+      .toEqual([before[0], before[3], before[1], before[2], ...before.slice(4)]);
+    // Restaura pelo arrasto inverso.
+    await sectionRow(page, before[3]).dragTo(sectionRow(page, before[2]));
+    await expect.poll(() => sectionNames(page)).toEqual(before);
+  });
+
+  test('adicionar seção na posição escolhida, preencher e excluir', async ({ page, context }) => {
+    const name = `Planos e2e ${Date.now()}`;
+    const before = await sectionNames(page);
+    const anchor = before[1];
+
+    // "+ Adicionar seção aqui" abaixo da segunda seção.
+    await sectionRow(page, anchor).getByRole('button', { name: 'Adicionar seção aqui' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Adicionar seção' });
+    await expect(dialog.getByLabel('Onde a seção entra na página')).toHaveValue('2');
+    // Tipos que só podem existir uma vez ficam indisponíveis.
+    await expect(dialog.getByRole('radio', { name: /Destaque principal/ })).toBeDisabled();
+    await dialog.getByRole('button', { name: 'Criar seção' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText('Escolha o tipo da seção.');
+    await dialog.getByText('Cartões', { exact: true }).click();
+    await expect(dialog.getByLabel('Nome da seção no painel')).toHaveValue('Serviços');
+    await dialog.getByLabel('Nome da seção no painel').fill(name);
+    // O ícone sugerido é o do tipo; dá para escolher outro para o menu lateral.
+    await expect(dialog.getByRole('radio', { name: 'Grade', exact: true })).toBeChecked();
+    await dialog.getByRole('radio', { name: 'Presente', exact: true }).check();
+    await dialog.getByRole('button', { name: 'Criar seção' }).click();
+
+    // Abre o editor da seção nova, que já aparece no menu lateral.
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Presente', exact: true })).toBeChecked();
+    await expect(page.getByRole('navigation', { name: 'Painel' }).getByRole('link', { name })).toBeVisible();
+    await page.locator('#section-title').fill('Nossos planos');
+    await page.locator('#section-nav_label').fill('Planos');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+    await page.getByRole('button', { name: 'Adicionar cartão' }).first().click();
+    await page.locator('input[id$="-title"]').last().fill('Plano básico');
+    await page.locator('input[id$="-label"]').last().fill('Plano básico');
+    await page.getByRole('button', { name: 'Salvar cartão' }).click();
+    await expect(page.getByText('Cartão adicionado(a).')).toBeVisible();
+
+    // No site: na posição escolhida, no menu e como opção do formulário.
+    const site = await context.newPage();
+    await site.goto('/');
+    // A página abre com o HTML do último build e se atualiza com o banco logo em seguida.
+    await expect.poll(async () => (await site.locator('main h2').allInnerTexts())[1]).toBe('Nossos planos');
+    await expect(
+      site.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Planos' }),
+    ).toBeVisible();
+    await expect(
+      site
+        .locator('#orcamento form')
+        .getByLabel(/Tipo de evento/)
+        .locator('option', { hasText: 'Plano básico' }),
+    ).toHaveCount(1);
+
+    // Excluir pelo editor: vai para a lixeira com o cartão.
+    await page.getByRole('button', { name: 'Excluir seção' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir seção' }).click();
+    await expect(page).toHaveURL(/\/admin\/secoes$/);
+    await expect(sectionRow(page, name)).toHaveCount(0);
+    await site.reload();
+    await expect(site.getByRole('heading', { name: 'Nossos planos' })).toHaveCount(0);
+
+    // Limpeza: apaga de vez da lixeira (o cartão vai junto).
+    await page.goto('/admin/lixeira');
+    const trashed = page.locator('li', { hasText: name });
+    await expect(trashed).toContainText('Seção · com 1 item');
+    await page.getByRole('button', { name: `Excluir definitivamente “${name}”` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+    await expect(trashed).toHaveCount(0);
+    await expect(page.locator('li', { hasText: 'Plano básico' })).toHaveCount(0);
+  });
+
+  test('ocultar e exibir uma seção', async ({ page, context }) => {
+    const row = sectionRow(page, 'Galeria');
+    const heading = 'Produto bonito antes mesmo da primeira colherada.';
+    await row.getByRole('button', { name: 'Ocultar “Galeria” no site' }).click();
+    await expect(row).toContainText('Oculta');
+    const site = await context.newPage();
+    await site.goto('/');
+    // A página abre com o HTML do último build e se atualiza com o banco logo em seguida.
+    await expect(site.getByRole('heading', { name: heading })).toHaveCount(0);
+    await expect(
+      site.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Galeria' }),
+    ).toHaveCount(0);
+
+    await row.getByRole('button', { name: 'Exibir “Galeria” no site' }).click();
+    await expect(row).not.toContainText('Oculta');
+    await site.reload();
+    await expect(site.getByRole('heading', { name: heading })).toBeVisible();
+  });
+
+  test('duplicar cria uma cópia oculta logo abaixo, com os itens', async ({ page }) => {
+    await expect(sectionRow(page, 'Destaque principal').getByRole('button', { name: /Duplicar/ })).toBeDisabled();
+    const before = await sectionNames(page);
+    await sectionRow(page, 'Personalização').getByRole('button', { name: 'Duplicar “Personalização”' }).click();
+    await expect(page.getByText('Cópia criada logo abaixo', { exact: false })).toBeVisible();
+    const after = await sectionNames(page);
+    const i = before.indexOf('Personalização');
+    expect(after[i + 1]).toBe('Personalização (cópia)');
+    const copy = sectionRow(page, 'Personalização (cópia)');
+    await expect(copy).toContainText('Oculta');
+    await expect(copy).toContainText('#personalizacao-copia');
+
+    await copy.getByRole('link', { name: 'Editar “Personalização (cópia)”' }).click();
+    await expect(page.locator('ol li h3')).toHaveCount(4);
+
+    // Limpeza.
+    await page.getByRole('button', { name: 'Excluir seção' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir seção' }).click();
+    await page.goto('/admin/lixeira');
+    await page.getByRole('button', { name: 'Excluir definitivamente “Personalização (cópia)”' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+  });
+
+  test('tela de seções acessível (axe)', async ({ page }) => {
+    const results = await new AxeBuilder({ page }).include('#admin-main').withTags(['wcag2a', 'wcag2aa']).analyze();
+    expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
+  });
+});
+
 test.describe('Imagens', () => {
   test.beforeEach(async ({ page }) => login(page));
 
-  test('upload com pré-visualização, otimização e exclusão', async ({ page, context }) => {
+  test('upload com pré-visualização, otimização, uso numa seção e exclusão', async ({ page, context }) => {
     await page.goto('/admin/imagens');
     const input = page.locator('input[type="file"]');
 
@@ -381,27 +594,48 @@ test.describe('Imagens', () => {
     await input.setInputFiles({ name: 'anim.gif', mimeType: 'image/gif', buffer: Buffer.from('GIF89a') });
     await expect(page.getByRole('alert')).toContainText('Formato não aceito');
 
-    // Upload válido
-    await input.setInputFiles(path.resolve('../la-dolce-data/assets/copinho-la-dolce-soft.jpg'));
+    // Upload válido: uma imagem 800×600 gerada no próprio navegador.
+    const dataUrl = await page.evaluate(() => {
+      const canvas = Object.assign(document.createElement('canvas'), { width: 800, height: 600 });
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#888';
+      ctx.fillRect(0, 0, 800, 600);
+      return canvas.toDataURL('image/png');
+    });
+    await input.setInputFiles({
+      name: 'teste.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(dataUrl.split(',')[1], 'base64'),
+    });
     await expect(page.getByText('Pré-visualização:')).toBeVisible();
     await page.getByRole('button', { name: 'Enviar imagem' }).click();
     await expect(page.getByText(/Descreva a imagem/)).toBeVisible(); // texto alternativo obrigatório
-    await page.getByLabel(/Descrição da imagem/).fill('Copinho de teste e2e');
+    await page.getByLabel(/Descrição da imagem/).fill('Imagem de teste e2e');
     await page.getByRole('button', { name: 'Enviar imagem' }).click();
     await expect(page.getByText('Imagem enviada.')).toBeVisible();
 
-    const card = page.locator('li', { has: page.locator('input[value="Copinho de teste e2e"]') });
+    const card = page.locator('li', { has: page.locator('input[value="Imagem de teste e2e"]') });
     await expect(card).toBeVisible();
-    await expect(card).toContainText('1066×1600px');
     const thumb = await card.locator('img').getAttribute('src');
     expect(thumb).toMatch(/\/storage\/v1\/object\/public\/media\/uploads\/.+-sm\.webp$/);
     const fileResponse = await context.request.get(thumb!);
     expect(fileResponse.ok()).toBe(true);
     expect(fileResponse.headers()['content-type']).toBe('image/webp');
 
+    // Usa na seção "Sabores": o aviso de exclusão cita onde ela aparece.
+    await openSection(page, 'Sabores');
+    await page.getByRole('button', { name: 'Escolher imagem' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Imagem de teste e2e/ })
+      .click();
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+
+    await page.goto('/admin/imagens');
     await card.getByRole('button', { name: 'Excluir' }).click();
     const dialog = page.getByRole('dialog', { name: 'Excluir imagem?' });
-    await expect(dialog).toContainText('não está em uso');
+    await expect(dialog).toContainText('Seção "Sabores"');
     await dialog.getByRole('button', { name: 'Excluir imagem' }).click();
     await expect(page.getByText('Imagem excluída.')).toBeVisible();
     await expect(card).toHaveCount(0);
@@ -415,7 +649,7 @@ test.describe('Imagens', () => {
     });
     await used.getByRole('button', { name: 'Excluir' }).click();
     const dialog = page.getByRole('dialog', { name: 'Excluir imagem?' });
-    await expect(dialog).toContainText('Destaque principal');
+    await expect(dialog).toContainText('Seção "Destaque principal"');
     await expect(dialog).toContainText('Galeria');
     await dialog.getByRole('button', { name: 'Cancelar' }).click();
     await expect(used).toBeVisible();
@@ -490,10 +724,10 @@ test.describe('Lixeira e cópia de segurança', () => {
 
   test('item excluído pode ser restaurado da lixeira', async ({ page }) => {
     const question = `Lixeira e2e ${Date.now()}`;
-    await page.goto('/admin/secoes/faq');
+    await openSection(page, 'Perguntas frequentes');
     await page.getByRole('button', { name: 'Adicionar pergunta' }).first().click();
-    await page.locator('input[id$="-question"]').last().fill(question);
-    await page.locator('textarea[id$="-answer"]').last().fill('Resposta de teste.');
+    await page.locator('input[id$="-title"]').last().fill(question);
+    await page.locator('textarea[id$="-description"]').last().fill('Resposta de teste.');
     await page.getByRole('button', { name: 'Salvar pergunta' }).click();
     await expect(page.getByText('Pergunta adicionado(a).')).toBeVisible();
 
@@ -506,12 +740,13 @@ test.describe('Lixeira e cópia de segurança', () => {
 
     await page.goto('/admin/lixeira');
     const trashed = page.locator('li', { hasText: question });
-    await expect(trashed).toContainText('Pergunta frequente');
+    await expect(trashed).toContainText('Item de seção');
+    await expect(trashed.getByRole('link', { name: 'Perguntas frequentes' })).toBeVisible();
     await trashed.getByRole('button', { name: `Restaurar “${question}”` }).click();
-    await expect(page.getByText(`“${question}” foi restaurado em Perguntas frequentes.`)).toBeVisible();
+    await expect(page.getByText(`“${question}” foi restaurado.`)).toBeVisible();
     await expect(trashed).toHaveCount(0);
 
-    await page.goto('/admin/secoes/faq');
+    await openSection(page, 'Perguntas frequentes');
     await expect(card).toBeVisible();
 
     // Limpeza: exclui de novo e apaga da lixeira de vez.
@@ -524,6 +759,26 @@ test.describe('Lixeira e cópia de segurança', () => {
     await expect(page.locator('li', { hasText: question })).toHaveCount(0);
   });
 
+  test('seção excluída volta da lixeira com os itens, no mesmo lugar', async ({ page }) => {
+    await page.getByRole('link', { name: 'Seções e ordem' }).click();
+    await expect(sectionRow(page, 'Destaque principal')).toBeVisible();
+    const before = await sectionNames(page);
+    await sectionRow(page, 'Personalização').getByRole('button', { name: 'Excluir “Personalização”' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir seção' }).click();
+    await expect(sectionRow(page, 'Personalização')).toHaveCount(0);
+
+    await page.goto('/admin/lixeira');
+    // Só a lista da lixeira (o menu lateral também tem um item "Personalização").
+    const trashed = page.locator('#admin-main li', { hasText: 'Personalização' });
+    await expect(trashed).toContainText('Seção · com 4 itens');
+    await trashed.getByRole('button', { name: 'Restaurar “Personalização”' }).click();
+    await expect(page.getByText('voltou para a página', { exact: false })).toBeVisible();
+    await expect(trashed).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Seções e ordem' }).click();
+    await expect.poll(() => sectionNames(page)).toEqual(before);
+  });
+
   test('baixa uma cópia de todo o conteúdo em JSON', async ({ page }) => {
     await page.goto('/admin/lixeira');
     const download = page.waitForEvent('download');
@@ -532,11 +787,10 @@ test.describe('Lixeira e cópia de segurança', () => {
     expect(file.suggestedFilename()).toMatch(/^la-dolce-conteudo-\d{4}-\d{2}-\d{2}\.json$/);
     const backup = JSON.parse(readFileSync((await file.path())!, 'utf8'));
     expect(backup.formato).toBe('la-dolce-backup');
-    expect(backup.dados.sections).toHaveLength(11);
+    expect(backup.versao).toBe(2);
+    expect(backup.dados.sections.length).toBeGreaterThan(0);
     expect(backup.dados.site_settings[0].whatsapp_number).toMatch(/^55\d+$/);
-    expect(Object.keys(backup.dados)).toEqual(
-      expect.arrayContaining(['event_types', 'features', 'gallery_items', 'faqs', 'testimonials', 'media']),
-    );
+    expect(Object.keys(backup.dados).sort()).toEqual(['media', 'section_items', 'sections', 'site_settings']);
   });
 });
 
@@ -544,7 +798,7 @@ test.describe('Pré-visualização', () => {
   test.beforeEach(async ({ page }) => login(page));
 
   test('mostra alterações não salvas no site, ao vivo, sem publicar', async ({ page, browser }) => {
-    await page.goto('/admin/secoes/hero');
+    await openSection(page, 'Destaque principal');
     const title = page.locator('#section-title');
     const original = await title.inputValue();
 

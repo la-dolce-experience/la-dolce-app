@@ -49,7 +49,13 @@ describe('Tour guiado', () => {
 
   it('passa por todas as áreas do painel', () => {
     const routes = new Set(TOUR_STEPS.map((s) => s.route));
-    for (const route of ['/admin', '/admin/secoes/hero', '/admin/secoes/events', '/admin/imagens', '/admin/contato']) {
+    for (const route of [
+      '/admin',
+      '/admin/secoes',
+      '/admin/secoes/@hero',
+      '/admin/secoes/@cartoes',
+      '/admin/imagens',
+    ]) {
       expect(routes).toContain(route);
     }
     expect(routes).toContain('/admin/seo');
@@ -59,9 +65,9 @@ describe('Tour guiado', () => {
   it('volta ao passo anterior e à tela dele', async () => {
     const user = userEvent.setup();
     renderTour();
-    const events = TOUR_STEPS.findIndex((s) => s.route === '/admin/secoes/events');
+    const events = TOUR_STEPS.findIndex((s) => s.route === '/admin/secoes/@cartoes');
     for (let i = 0; i < events; i++) await user.click(screen.getByRole('button', { name: 'Próximo' }));
-    expect(screen.getByTestId('path')).toHaveTextContent('/admin/secoes/events');
+    expect(screen.getByTestId('path')).toHaveTextContent('/admin/secoes/@cartoes');
     await user.click(screen.getByRole('button', { name: 'Voltar' }));
     expect(await title(events - 1)).toBeInTheDocument();
     expect(screen.getByTestId('path')).toHaveTextContent(TOUR_STEPS[events - 1].route);

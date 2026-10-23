@@ -6,15 +6,13 @@
  * Nada vai para o banco: só quem está editando, neste navegador, vê a pré-visualização.
  */
 import type { Tables } from '../types/database';
-import type { SectionKey } from '../types/content';
 
-/** Tabelas de listas ordenáveis editadas no painel. */
-export type ListTable =
-  'event_types' | 'features' | 'steps' | 'gallery_items' | 'faqs' | 'testimonials' | 'flavor_items';
+/** Tabela dos itens das seções, editada pelas listas do painel. */
+export type ListTable = 'section_items';
 
-/** Recorte de uma tabela editado por uma lista do painel (ex.: só os sabores de flavor_items). */
+/** Recorte da tabela editado por uma lista do painel: os itens de uma seção. */
 export interface ListScope {
-  column: 'kind';
+  column: 'section_id';
   value: string;
 }
 
@@ -22,10 +20,8 @@ type MediaRow = Tables<'media'>;
 type SectionRow = Tables<'sections'>;
 type SettingsRow = Tables<'site_settings'>;
 
-export type SectionDraft = Pick<
-  SectionRow,
-  'eyebrow' | 'title' | 'body' | 'cta_label' | 'note' | 'image_caption' | 'image_media_id' | 'image_alt' | 'visible'
-> & { media: MediaRow | null };
+/** A seção inteira, como está na tela do painel (inclusive se estiver oculta no site publicado). */
+export type SectionDraft = Omit<SectionRow, 'updated_at'> & { media: MediaRow | null };
 
 export type SettingsDraft = Partial<Omit<SettingsRow, 'id' | 'updated_at'>> & {
   logo?: MediaRow | null;
@@ -42,7 +38,8 @@ export interface ListDraft {
 }
 
 export interface PreviewDraft {
-  sections: Partial<Record<SectionKey, SectionDraft>>;
+  /** Chave: id da seção. */
+  sections: Record<string, SectionDraft>;
   settings: SettingsDraft;
   /** Chave: tabela, ou "tabela:valor" quando a lista é um recorte (ver listDraftKey). */
   lists: Record<string, ListDraft>;
@@ -50,6 +47,8 @@ export interface PreviewDraft {
 }
 
 export const PREVIEW_STORAGE_KEY = 'la-dolce:previa';
+/** Muda a cada gravação no painel: a pré-visualização busca de novo o conteúdo publicado. */
+export const PUBLISHED_STORAGE_KEY = 'la-dolce:previa:publicado';
 export const PREVIEW_PARAM = 'previa';
 /** Pré-visualização embutida no painel (iframe): sem a faixa com o botão de fechar. */
 export const EMBED_PARAM = 'painel';
@@ -97,13 +96,9 @@ function write(draft: PreviewDraft) {
 }
 
 /** Atualiza a parte do rascunho que pertence a uma tela do painel. */
-export function updatePreviewDraft(part: {
-  section?: [SectionKey, SectionDraft];
-  settings?: SettingsDraft;
-  list?: ListDraft;
-}) {
+export function updatePreviewDraft(part: { section?: SectionDraft; settings?: SettingsDraft; list?: ListDraft }) {
   const draft = readPreviewDraft() ?? { sections: {}, settings: {}, lists: {}, updatedAt: '' };
-  if (part.section) draft.sections[part.section[0]] = part.section[1];
+  if (part.section) draft.sections[part.section.id] = part.section;
   if (part.settings) draft.settings = { ...draft.settings, ...part.settings };
   if (part.list) draft.lists[listDraftKey(part.list.table, part.list.scope)] = part.list;
   draft.updatedAt = new Date().toISOString();
@@ -111,7 +106,7 @@ export function updatePreviewDraft(part: {
 }
 
 /** Remove do rascunho uma seção, uma lista ou campos de configuração (ao salvar, descartar ou sair da tela). */
-export function clearPreviewDraft(part: { section?: SectionKey; settingsFields?: string[]; list?: string }) {
+export function clearPreviewDraft(part: { section?: string; settingsFields?: string[]; list?: string }) {
   const draft = readPreviewDraft();
   if (!draft) return;
   if (part.section) delete draft.sections[part.section];
@@ -121,6 +116,23 @@ export function clearPreviewDraft(part: { section?: SectionKey; settingsFields?:
   if (part.settingsFields?.includes('og_media_id')) delete draft.settings.og;
   draft.updatedAt = new Date().toISOString();
   write(draft);
+}
+
+/** Avisa a pré-visualização aberta que o conteúdo publicado mudou (seção salva, ordem nova, item excluído...). */
+export function notifyPublishedChange() {
+  try {
+    localStorage.setItem(PUBLISHED_STORAGE_KEY, new Date().toISOString());
+  } catch {
+    // Sem armazenamento: a pré-visualização só se atualiza ao recarregar.
+  }
+}
+
+export function readPublishedStamp(): string {
+  try {
+    return localStorage.getItem(PUBLISHED_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export const previewUrl = (anchor?: string, embedded = false) =>

@@ -92,8 +92,9 @@ test.describe('WhatsApp', () => {
     const text = new URL(opened[0]).searchParams.get('text')!;
     expect(text).toContain('Nome: José Antônio');
     expect(text).toContain('Contato: (11) 98765-4321');
-    expect(text).toContain('Local: Moóca, São Paulo');
-    expect(text).toContain('Descrição: Aniversário de 15 anos 🎉\nTema: rosa & dourado');
+    expect(text).toContain('Tipo de evento: Evento social');
+    expect(text).toContain('Cidade ou local do evento: Moóca, São Paulo');
+    expect(text).toContain('Conte um pouco sobre o evento: Aniversário de 15 anos 🎉\nTema: rosa & dourado');
     expect(text).not.toContain('E-mail:');
     await expect(form.getByRole('status')).toContainText('toque em Enviar');
   });
@@ -109,6 +110,29 @@ test.describe('WhatsApp', () => {
     await expect(form.getByLabel(/^Nome/)).toBeFocused();
     await expect(form.getByLabel(/E-mail/)).toHaveValue('invalido@');
     expect(await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toHaveLength(0);
+  });
+});
+
+test.describe('Seções montadas no painel', () => {
+  test('a página mostra as seções na ordem do banco, e o menu segue a mesma ordem', async ({ page, request }) => {
+    const env = process.env;
+    const api = env.VITE_SUPABASE_URL ?? 'http://127.0.0.1:54321';
+    const key = env.VITE_SUPABASE_ANON_KEY ?? '';
+    const rows = (await (
+      await request.get(`${api}/rest/v1/sections?select=slug,nav_label,type&order=position`, {
+        headers: { apikey: key },
+      })
+    ).json()) as { slug: string; nav_label: string; type: string }[];
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    const onPage = await page.locator('main > section[id]').evaluateAll((els) => els.map((e) => e.id));
+    const expected = rows.map((r) => r.slug).filter((slug) => onPage.includes(slug));
+    expect(onPage).toEqual(expected);
+    const menu = await page
+      .getByRole('navigation', { name: 'Principal' })
+      .getByRole('link')
+      .evaluateAll((links) => links.map((l) => l.getAttribute('href')));
+    expect(menu).toEqual(menu.slice().sort((a, b) => onPage.indexOf(a!.slice(1)) - onPage.indexOf(b!.slice(1))));
   });
 });
 

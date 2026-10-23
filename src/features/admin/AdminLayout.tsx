@@ -1,26 +1,15 @@
 import {
   ArchiveRestore,
-  Camera,
-  CircleHelp,
-  ClipboardList,
   ExternalLink,
-  HeartHandshake,
-  IceCreamCone,
   Images,
   KeyRound,
   LayoutDashboard,
-  ListOrdered,
+  Layers,
   LogOut,
-  MapPin,
   Menu,
-  MessageSquareQuote,
-  Palette,
-  PartyPopper,
   Phone,
   Search,
-  Sparkles,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -31,30 +20,18 @@ import { useFeedback } from './components/Feedback';
 import { useAnyDirty } from './components/UnsavedChanges';
 import { HelpMenu } from './onboarding/HelpMenu';
 import { GuidedTour } from './onboarding/GuidedTour';
+import { resolveTourSteps, TOUR_STEPS } from './onboarding/steps';
 import { LivePreviewPanel, LivePreviewProvider, useLivePreview } from './preview/LivePreview';
-import { SECTION_CONFIG } from './sectionConfig';
-import type { SectionKey } from '../../types/content';
-
-/** Ícone de cada seção no menu lateral. */
-const SECTION_ICONS: Record<SectionKey, LucideIcon> = {
-  hero: Sparkles,
-  experience: HeartHandshake,
-  events: PartyPopper,
-  flavors: IceCreamCone,
-  personalization: Palette,
-  steps: ListOrdered,
-  gallery: Camera,
-  testimonials: MessageSquareQuote,
-  quote: ClipboardList,
-  location: MapPin,
-  faq: CircleHelp,
-};
+import { sectionIcon } from './sectionIcons';
+import { SectionsProvider, useSections } from './SectionsContext';
 
 export function AdminLayout() {
   return (
-    <LivePreviewProvider>
-      <AdminShell />
-    </LivePreviewProvider>
+    <SectionsProvider>
+      <LivePreviewProvider>
+        <AdminShell />
+      </LivePreviewProvider>
+    </SectionsProvider>
   );
 }
 
@@ -65,6 +42,7 @@ function AdminShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const preview = useLivePreview();
+  const { sections } = useSections();
   const previewVisible = preview.open && preview.anchor !== undefined;
   // Primeiro acesso: o tour abre sozinho até ser concluído ou pulado uma vez.
   const [guideOpen, setGuideOpen] = useState(() => !session?.user.user_metadata?.onboarding_completed_at);
@@ -145,9 +123,16 @@ function AdminShell() {
             Página inicial
           </p>
           <ul className={a.navGroup} aria-labelledby="nav-home" data-tour="nav-sections">
-            {SECTION_CONFIG.map((s) => {
-              const Icon = SECTION_ICONS[s.key];
-              return link(`/admin/secoes/${s.key}`, s.label, <Icon aria-hidden="true" />);
+            {link('/admin/secoes', 'Seções e ordem', <Layers aria-hidden="true" />, true)}
+            {sections?.map((s) => {
+              const Icon = sectionIcon(s);
+              return link(
+                `/admin/secoes/${s.id}`,
+                s.name,
+                <Icon aria-hidden="true" />,
+                false,
+                s.visible ? undefined : 'oculta',
+              );
             })}
           </ul>
 
@@ -187,7 +172,8 @@ function AdminShell() {
         </div>
       </main>
       {!guideOpen && <LivePreviewPanel />}
-      {guideOpen && <GuidedTour onClose={closeGuide} />}
+      {/* O tour abre as telas das seções: espera a lista de seções carregar. */}
+      {guideOpen && sections && <GuidedTour onClose={closeGuide} steps={resolveTourSteps(TOUR_STEPS, sections)} />}
     </div>
   );
 }

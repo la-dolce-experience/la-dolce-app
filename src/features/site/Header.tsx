@@ -2,7 +2,9 @@ import { Menu, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ButtonLink } from '../../components/Button/Button';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 import { buildNavItems } from './navigation';
+import { findSection } from './sectionHelpers';
 import styles from './Header.module.css';
 
 export function Header() {
@@ -12,6 +14,16 @@ export function Header() {
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const navItems = buildNavItems(content);
+  // Botão de destaque: leva ao formulário; sem formulário na página, abre o WhatsApp.
+  const form = findSection(content, 'formulario');
+  const cta = form
+    ? { href: `#${form.slug}`, label: form.navLabel.trim() || 'Fale conosco', external: false }
+    : {
+        href: buildWhatsAppUrl(settings.whatsappNumber, settings.whatsappGreeting),
+        label: 'Fale conosco',
+        external: true,
+      };
+  const ctaProps = cta.external ? { target: '_blank', rel: 'noopener noreferrer', 'data-wa-origem': 'cabecalho' } : {};
 
   useEffect(() => {
     if (!open) return;
@@ -34,15 +46,21 @@ export function Header() {
     <header className={styles.header}>
       <div className={`container ${styles.bar}`}>
         <a className={styles.brand} href="#inicio" aria-label={`${settings.businessName} — início`}>
-          <img
-            src={settings.logo.src}
-            srcSet={settings.logo.srcSet}
-            sizes={settings.logo.srcSet ? '(min-width: 768px) 116px, 92px' : undefined}
-            alt=""
-            width={settings.logo.width}
-            height={settings.logo.height}
-            className={styles.logo}
-          />
+          {settings.logo ? (
+            <img
+              src={settings.logo.src}
+              srcSet={settings.logo.srcSet}
+              sizes={settings.logo.srcSet ? '(min-width: 768px) 116px, 92px' : undefined}
+              alt=""
+              width={settings.logo.width}
+              height={settings.logo.height}
+              className={styles.logo}
+            />
+          ) : (
+            <span className={styles.brandName} aria-hidden="true">
+              {settings.businessName}
+            </span>
+          )}
         </a>
 
         <nav aria-label="Principal" className={styles.desktopNav}>
@@ -56,8 +74,8 @@ export function Header() {
         </nav>
 
         <div className={styles.actions}>
-          <ButtonLink href="#orcamento" size="sm" className={styles.cta}>
-            Pedir orçamento
+          <ButtonLink href={cta.href} size="sm" className={styles.cta} {...ctaProps}>
+            {cta.label}
           </ButtonLink>
           <button
             ref={toggleRef}
@@ -83,8 +101,8 @@ export function Header() {
             </li>
           ))}
           <li>
-            <a href="#orcamento" className={styles.mobileCta} onClick={() => setOpen(false)}>
-              Pedir orçamento
+            <a href={cta.href} className={styles.mobileCta} onClick={() => setOpen(false)} {...ctaProps}>
+              {cta.label}
             </a>
           </li>
         </ul>

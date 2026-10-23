@@ -1,19 +1,17 @@
 import type { SiteContent } from '../../types/content';
+import { hasContent } from './sectionHelpers';
 
 export interface NavItem {
   href: string;
   label: string;
 }
 
-/** Itens de menu apenas para seções que estão visíveis e têm conteúdo. */
+/**
+ * Itens de menu: seções com nome no menu, na ordem da página, que têm conteúdo para mostrar.
+ * O formulário fica de fora: ele é o botão de destaque do cabeçalho.
+ */
 export function buildNavItems(content: SiteContent): NavItem[] {
-  const s = content.sections;
-  const items: (NavItem | false)[] = [
-    s.experience.visible && { href: '#experiencia', label: 'Experiência' },
-    s.events.visible && content.eventTypes.length > 0 && { href: '#eventos', label: 'Eventos' },
-    s.gallery.visible && content.gallery.length > 0 && { href: '#galeria', label: 'Galeria' },
-    s.location.visible && { href: '#atendimento', label: 'Atendimento' },
-    s.faq.visible && content.faqs.length > 0 && { href: '#duvidas', label: 'Dúvidas' },
-  ];
-  return items.filter((i): i is NavItem => i !== false);
+  return content.sections
+    .filter((s) => s.navLabel.trim() && s.type !== 'formulario' && hasContent(s))
+    .map((s) => ({ href: `#${s.slug}`, label: s.navLabel.trim() }));
 }

@@ -1,7 +1,6 @@
 import type { ListScope, ListTable } from '../lib/preview';
 import { MEDIA_BUCKET, requireSupabase } from '../lib/supabase';
-import type { SectionKey } from '../types/content';
-import type { Tables, TablesInsert, TablesUpdate } from '../types/database';
+import type { Json, Tables, TablesInsert, TablesUpdate } from '../types/database';
 
 export type { ListScope, ListTable };
 export type ListRow<T extends ListTable> = Tables<T>;
@@ -18,11 +17,7 @@ function check<T>(result: { data: T | null; error: unknown }): T {
   return result.data;
 }
 
-/**
- * As listas compartilham a mesma forma (id, position, visible); o cliente tipado
- * não consegue estreitar uniões de tabelas, então usamos uma delas como referência.
- */
-const listTable = (table: ListTable) => requireSupabase().from(table as 'faqs');
+const listTable = (table: ListTable) => requireSupabase().from(table);
 
 // ---------------- Autenticação ----------------
 
@@ -44,36 +39,78 @@ export async function updateSettings(patch: SettingsPatch): Promise<SettingsRow>
 
 // ---------------- Seções ----------------
 
-export async function getSection(key: SectionKey): Promise<SectionRow> {
-  return check(await requireSupabase().from('sections').select('*').eq('key', key).single());
-}
-
-export async function updateSection(key: SectionKey, patch: SectionPatch): Promise<SectionRow> {
-  return check(await requireSupabase().from('sections').update(patch).eq('key', key).select().single());
-}
-
+/** Todas as seções (inclusive as ocultas), na ordem da página. */
 export async function listSections(): Promise<SectionRow[]> {
-  return check(await requireSupabase().from('sections').select('*'));
+  return check(await requireSupabase().from('sections').select('*').order('position'));
 }
 
-// ---------------- Listas ordenáveis ----------------
+export async function getSection(id: string): Promise<SectionRow> {
+  return check(await requireSupabase().from('sections').select('*').eq('id', id).single());
+}
 
-/** Itens de uma lista, na ordem do site. Com `scope`, só o recorte (ex.: os sabores de flavor_items). */
+export async function updateSection(id: string, patch: SectionPatch): Promise<SectionRow> {
+  return check(await requireSupabase().from('sections').update(patch).eq('id', id).select().single());
+}
+
+export interface NewSection {
+  type: string;
+  slug: string;
+  name: string;
+  nav_label?: string;
+  /** Ícone no menu do painel (ver features/admin/sectionIcons.ts). */
+  icon?: string;
+  eyebrow?: string;
+  title?: string;
+  body?: string;
+  cta_label?: string;
+  options?: Json;
+  visible?: boolean;
+}
+
+/** Cria uma seção na posição indicada (0 = topo); as seguintes descem uma casa. */
+export async function createSection(section: NewSection, position: number): Promise<SectionRow> {
+  return check(
+    await requireSupabase()
+      .rpc('create_section', { p_section: section as unknown as Json, p_position: position })
+      .single(),
+  );
+}
+
+/** Cópia oculta da seção, com os itens, logo abaixo da original. */
+export async function duplicateSection(id: string, slug: string, name: string): Promise<SectionRow> {
+  return check(await requireSupabase().rpc('duplicate_section', { p_id: id, p_slug: slug, p_name: name }).single());
+}
+
+/** Exclui a seção e os itens dela (ficam na lixeira por 30 dias). */
+export async function deleteSection(id: string): Promise<void> {
+  const { error } = await requireSupabase().from('sections').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Grava a nova ordem: a posição de cada seção passa a ser seu índice na lista. */
+export async function reorderSections(orderedIds: string[]): Promise<void> {
+  const { error } = await requireSupabase().rpc('reorder_sections', { p_ids: orderedIds });
+  if (error) throw error;
+}
+
+// ---------------- Itens das seções ----------------
+
+/** Itens de uma lista, na ordem do site. Com `scope`, só os de uma seção. */
 export async function listItems<T extends ListTable>(table: T, scope?: ListScope): Promise<ListRow<T>[]> {
   let query = listTable(table).select('*');
-  if (scope) query = query.eq(scope.column as 'id', scope.value);
+  if (scope) query = query.eq(scope.column, scope.value);
   const result = await query.order('position');
-  return check(result) as unknown as ListRow<T>[];
+  return check(result) as ListRow<T>[];
 }
 
 export async function insertItem<T extends ListTable>(table: T, row: TablesInsert<T>): Promise<ListRow<T>> {
-  // O cliente tipado não estreita bem uniões de tabelas; o tipo de entrada já é validado acima.
-  const result = await requireSupabase()
-    .from(table)
-    .insert(row as never)
-    .select()
-    .single();
-  return check(result) as ListRow<T>;
+  // Uma tabela só (section_items); o cliente tipado não estreita o genérico.
+  return check(
+    await listTable(table)
+      .insert(row as never)
+      .select()
+      .single(),
+  ) as ListRow<T>;
 }
 
 export async function updateItem<T extends ListTable>(
@@ -81,12 +118,13 @@ export async function updateItem<T extends ListTable>(
   id: string,
   patch: TablesUpdate<T>,
 ): Promise<ListRow<T>> {
-  const result = await listTable(table)
-    .update(patch as never)
-    .eq('id', id)
-    .select()
-    .single();
-  return check(result) as unknown as ListRow<T>;
+  return check(
+    await listTable(table)
+      .update(patch as never)
+      .eq('id', id)
+      .select()
+      .single(),
+  ) as ListRow<T>;
 }
 
 export async function deleteItem(table: ListTable, id: string): Promise<void> {
@@ -94,13 +132,10 @@ export async function deleteItem(table: ListTable, id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Grava a nova ordem: a posição de cada item passa a ser seu índice na lista. */
-export async function reorderItems(table: ListTable, orderedIds: string[]): Promise<void> {
-  const results = await Promise.all(
-    orderedIds.map((id, position) => listTable(table).update({ position }).eq('id', id)),
-  );
-  const failed = results.find((r) => r.error);
-  if (failed?.error) throw failed.error;
+/** Grava a nova ordem dos itens: a posição de cada um passa a ser seu índice na lista. */
+export async function reorderItems(_table: ListTable, orderedIds: string[]): Promise<void> {
+  const { error } = await requireSupabase().rpc('reorder_section_items', { p_ids: orderedIds });
+  if (error) throw error;
 }
 
 // ---------------- Imagens ----------------
@@ -170,33 +205,29 @@ export interface MediaUsage {
   label: string;
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  hero: 'Destaque principal',
-  experience: 'Experiência',
-  flavors: 'Sabores e apresentação',
-};
-
 /** Onde a imagem é usada no site (para avisar antes de excluir). */
 export async function getMediaUsage(mediaId: string): Promise<MediaUsage[]> {
   const db = requireSupabase();
-  const [sections, settings, gallery, flavors, testimonials] = await Promise.all([
-    db.from('sections').select('key').eq('image_media_id', mediaId),
+  const [sections, settings, items] = await Promise.all([
+    db.from('sections').select('id, name, image_media_id'),
     db.from('site_settings').select('logo_media_id, og_media_id').eq('id', 1).maybeSingle(),
-    db.from('gallery_items').select('id').eq('media_id', mediaId),
-    db.from('flavor_items').select('title').eq('media_id', mediaId),
-    db.from('testimonials').select('author').or(`media_id.eq.${mediaId},photo_media_ids.cs.{${mediaId}}`),
+    db
+      .from('section_items')
+      .select('section_id, title, media_id')
+      .or(`media_id.eq.${mediaId},photo_media_ids.cs.{${mediaId}}`),
   ]);
-  for (const r of [sections, settings, gallery, flavors, testimonials]) if (r.error) throw r.error;
+  for (const r of [sections, settings, items]) if (r.error) throw r.error;
 
-  const usage: MediaUsage[] = (sections.data ?? []).map((s) => ({
-    label: `Seção "${SECTION_LABELS[s.key] ?? s.key}"`,
-  }));
+  const names = new Map((sections.data ?? []).map((s) => [s.id, s.name]));
+  const usage: MediaUsage[] = (sections.data ?? [])
+    .filter((s) => s.image_media_id === mediaId)
+    .map((s) => ({ label: `Seção "${s.name}"` }));
   if (settings.data?.logo_media_id === mediaId) usage.push({ label: 'Logotipo' });
   if (settings.data?.og_media_id === mediaId) usage.push({ label: 'Imagem de compartilhamento (SEO)' });
-  const g = gallery.data?.length ?? 0;
-  if (g > 0) usage.push({ label: g === 1 ? 'Galeria (1 foto)' : `Galeria (${g} fotos)` });
-  for (const f of flavors.data ?? []) usage.push({ label: `Sabores e apresentação: "${f.title}"` });
-  for (const t of testimonials.data ?? []) usage.push({ label: `Depoimento de ${t.author}` });
+  for (const i of items.data ?? []) {
+    const section = names.get(i.section_id) ?? 'Seção';
+    usage.push({ label: i.title ? `${section}: "${i.title}"` : section });
+  }
   return usage;
 }
 
@@ -265,7 +296,8 @@ export async function deleteFromTrash(id: string): Promise<void> {
 
 export interface ContentBackup {
   formato: 'la-dolce-backup';
-  versao: 1;
+  /** 2: seções ordenáveis (sections + section_items). A versão 1 era do modelo com uma tabela por lista. */
+  versao: 2;
   geradoEm: string;
   observacao: string;
   dados: Record<string, unknown>;
@@ -274,35 +306,22 @@ export interface ContentBackup {
 /** Todo o conteúdo editável (inclusive itens ocultos), em JSON. Os arquivos de imagem continuam no Storage. */
 export async function exportContent(): Promise<ContentBackup> {
   const sb = requireSupabase();
-  const [settings, sections, eventTypes, features, flavors, steps, gallery, faqs, testimonials, media] =
-    await Promise.all([
-      sb.from('site_settings').select('*'),
-      sb.from('sections').select('*').order('key'),
-      sb.from('event_types').select('*').order('position'),
-      sb.from('features').select('*').order('position'),
-      sb.from('flavor_items').select('*').order('kind').order('position'),
-      sb.from('steps').select('*').order('position'),
-      sb.from('gallery_items').select('*').order('position'),
-      sb.from('faqs').select('*').order('position'),
-      sb.from('testimonials').select('*').order('position'),
-      sb.from('media').select('*').order('created_at'),
-    ]);
+  const [settings, sections, items, media] = await Promise.all([
+    sb.from('site_settings').select('*'),
+    sb.from('sections').select('*').order('position'),
+    sb.from('section_items').select('*').order('section_id').order('position'),
+    sb.from('media').select('*').order('created_at'),
+  ]);
   return {
     formato: 'la-dolce-backup',
-    versao: 1,
+    versao: 2,
     geradoEm: new Date().toISOString(),
     observacao:
-      'Cópia dos textos, contatos, listas e referências das imagens. Os arquivos de imagem ficam no Storage do Supabase (bucket "media").',
+      'Cópia dos textos, contatos, seções e referências das imagens. Os arquivos de imagem ficam no Storage do Supabase (bucket "media").',
     dados: {
       site_settings: check(settings),
       sections: check(sections),
-      event_types: check(eventTypes),
-      features: check(features),
-      flavor_items: check(flavors),
-      steps: check(steps),
-      gallery_items: check(gallery),
-      faqs: check(faqs),
-      testimonials: check(testimonials),
+      section_items: check(items),
       media: check(media),
     },
   };

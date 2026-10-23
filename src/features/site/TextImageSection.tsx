@@ -2,16 +2,16 @@ import type { ReactNode } from 'react';
 import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImage';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import type { ImageRef, Section } from '../../types/content';
+import { opt } from './sectionHelpers';
 import styles from './Sections.module.css';
 
 interface Props {
-  id?: string;
   section: Section;
   /** Imagem à direita no desktop (texto primeiro). */
   imageRight?: boolean;
   /** Produto recortado (fundo transparente): "contain" em vez de "cover". */
   contain?: boolean;
-  /** Conteúdo extra abaixo do texto e da foto (ex.: lista de sabores). */
+  /** Conteúdo extra abaixo do texto e da foto (ex.: grade do catálogo). */
   children?: ReactNode;
 }
 
@@ -27,12 +27,11 @@ function photoSizes(image: ImageRef, contain: boolean): string {
   return `(min-width: 800px) ${Math.round(512 * ratio)}px, calc((70vw - 48px) * ${r})`;
 }
 
-/** Seção de texto + foto, usada em "Experiência" e "Sabores e apresentação". */
-export function SplitSection({ id, section, imageRight = false, contain = false, children }: Props) {
-  if (!section.visible) return null;
-  const headingId = `${section.key}-title`;
+/** Seção de texto + foto (base de "Texto com imagem" e "Catálogo"). */
+export function SplitSection({ section, imageRight = false, contain = false, children }: Props) {
+  const headingId = `${section.slug}-title`;
   return (
-    <section id={id} className={styles.section} aria-labelledby={headingId}>
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className={`container ${styles.split} ${imageRight ? styles.splitReverse : ''}`}>
         {section.image && (
           <figure className={`${styles.photo} ${contain ? styles.photoContain : ''}`}>
@@ -43,5 +42,16 @@ export function SplitSection({ id, section, imageRight = false, contain = false,
       </div>
       {children}
     </section>
+  );
+}
+
+/** "Texto com imagem": a foto fica do lado escolhido no painel. */
+export function TextImageSection({ section }: { section: Section }) {
+  return (
+    <SplitSection
+      section={section}
+      imageRight={opt(section, 'imagePosition') === 'direita'}
+      contain={opt(section, 'imageFit') === 'inteira'}
+    />
   );
 }

@@ -1,7 +1,13 @@
 import { ArrowDown, ArrowUp, Eye, LoaderCircle, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../../components/Button/Button';
-import { clearPreviewDraft, listDraftKey, updatePreviewDraft, type ListDraftRow } from '../../../lib/preview';
+import {
+  clearPreviewDraft,
+  listDraftKey,
+  notifyPublishedChange,
+  updatePreviewDraft,
+  type ListDraftRow,
+} from '../../../lib/preview';
 import {
   deleteItem,
   insertItem,
@@ -40,8 +46,10 @@ export interface FieldDef {
 
 interface Props<T extends ListTable> {
   table: T;
-  /** Recorte da tabela editado por esta lista (ex.: só os sabores de flavor_items). */
+  /** Recorte da tabela editado por esta lista: os itens de uma seção. */
   scope?: ListScope;
+  /** Identifica a lista no tour do painel (data-tour="list-..."). */
+  tourId?: string;
   title: string;
   description?: string;
   /** Nome de um item no singular, ex.: "pergunta". */
@@ -77,6 +85,7 @@ const pick = (row: Record<string, unknown>, fields: FieldDef[]): Values =>
 export function ListEditor<T extends ListTable>({
   table,
   scope,
+  tourId,
   title,
   description,
   itemName,
@@ -120,7 +129,7 @@ export function ListEditor<T extends ListTable>({
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [table, attempt]);
+  }, [table, scope?.value, attempt]);
 
   const [highlighted, setHighlighted] = useState<string | null>(null);
 
@@ -187,14 +196,10 @@ export function ListEditor<T extends ListTable>({
     try {
       const savedIds = next.filter((i) => i.id).map((i) => i.id!);
       await reorderItems(table, savedIds);
+      notifyPublishedChange();
       setItems((list) => list!.map((i) => (i.id ? { ...i, position: savedIds.indexOf(i.id) } : i)));
       notify('success', 'Ordem atualizada.');
-      requestAnimationFrame(() =>
-        document
-          .getElementById(`item-${next[target].key}`)
-          ?.querySelector<HTMLElement>(`[data-move="${delta}"]`)
-          ?.focus(),
-      );
+      setRefocus({ key: next[target].key, delta });
     } catch (e) {
       setItems(previous);
       notify('error', toFriendlyError(e));
@@ -202,6 +207,19 @@ export function ListEditor<T extends ListTable>({
       setReordering(false);
     }
   }
+
+  // Teclado: depois de mover pelas setas, o foco volta para a mesma seta do item movido (ou a outra, se essa
+  // ficou desabilitada no topo ou no fim da lista). Só depois de liberar as setas: desabilitadas, não recebem foco.
+  const [refocus, setRefocus] = useState<{ key: string; delta: -1 | 1 } | null>(null);
+  useEffect(() => {
+    if (!refocus || reordering) return;
+    const card = document.getElementById(`item-${refocus.key}`);
+    const button =
+      card?.querySelector<HTMLElement>(`[data-move="${refocus.delta}"]:not(:disabled)`) ??
+      card?.querySelector<HTMLElement>('[data-move]:not(:disabled)');
+    button?.focus();
+    setRefocus(null);
+  }, [refocus, reordering]);
 
   // Depois do maior valor gravado: exclusões deixam lacunas, então contar os itens poderia repetir uma posição.
   const nextPosition = useMemo(
@@ -222,11 +240,7 @@ export function ListEditor<T extends ListTable>({
   );
 
   return (
-    <section
-      className={a.panel}
-      aria-labelledby={`${draftKey}-title`}
-      data-tour={`list-${scope ? scope.value : table}`}
-    >
+    <section className={a.panel} aria-labelledby={`${draftKey}-title`} data-tour={`list-${tourId ?? table}`}>
       <div className={a.panelHeader}>
         <div>
           <h2 id={`${draftKey}-title`}>{title}</h2>
@@ -391,6 +405,7 @@ function ItemCard({
       setValues(saved);
       const { id, position: savedPosition } = row as { id: string; position: number };
       onSaved({ id, position: savedPosition, values: saved });
+      notifyPublishedChange();
       notify('success', isDraft ? `${capitalize(itemName)} adicionado(a).` : 'Alterações salvas.');
     } catch (e) {
       notify('error', toFriendlyError(e));
@@ -419,6 +434,7 @@ function ItemCard({
     setBusy(true);
     try {
       await deleteItem(table, item.id!);
+      notifyPublishedChange();
       notify('success', `${capitalize(itemName)} excluído(a).`);
       onRemoved();
     } catch (e) {

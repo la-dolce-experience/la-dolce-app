@@ -73,6 +73,34 @@ export function TextField({
   );
 }
 
+type SelectFieldProps = BaseProps & {
+  value: string;
+  options: { value: string; label: string }[];
+  onValueChange: (value: string) => void;
+};
+
+export function SelectField({ id, label, help, error, value, options, onValueChange }: SelectFieldProps) {
+  return (
+    <div className={styles.field}>
+      <label htmlFor={id}>{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onValueChange(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(id, help, error)}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <Meta id={id} help={help} error={error} />
+    </div>
+  );
+}
+
 type TextAreaProps = BaseProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id' | 'onChange' | 'value'> & {
     value: string;

@@ -40,11 +40,11 @@ describe('buildQuoteMessage', () => {
       name: 'Ana Souza',
       phone: '11987654321',
       email: 'ana@exemplo.com',
-      eventType: 'Evento social',
-      eventDate: '2026-12-05',
-      guests: '120',
+      subject: 'Serviço 1',
+      date: '2026-12-05',
+      quantity: '120',
       location: 'Pinheiros, São Paulo',
-      details: 'Casamento à tarde.\nQueremos copinhos personalizados.',
+      details: 'Primeira linha.\nSegunda linha.',
     });
     expect(message).toBe(
       [
@@ -53,11 +53,11 @@ describe('buildQuoteMessage', () => {
         'Nome: Ana Souza',
         'Contato: (11) 98765-4321',
         'E-mail: ana@exemplo.com',
-        'Tipo de evento: Evento social',
-        'Data do evento: 05/12/2026',
-        'Convidados (estimativa): 120',
+        'Assunto: Serviço 1',
+        'Data: 05/12/2026',
+        'Quantidade: 120',
         'Local: Pinheiros, São Paulo',
-        'Descrição: Casamento à tarde.\nQueremos copinhos personalizados.',
+        'Mensagem: Primeira linha.\nSegunda linha.',
         '',
         'Poderiam me orientar sobre os próximos passos?',
       ].join('\n'),
@@ -65,13 +65,28 @@ describe('buildQuoteMessage', () => {
   });
 
   it('omite linhas de campos opcionais vazios', () => {
-    const message = buildQuoteMessage({ name: 'João', phone: '1133334444', eventType: 'Outros' });
-    expect(message).not.toMatch(/E-mail|Data do evento|Convidados|Local|Descrição/);
+    const message = buildQuoteMessage({ name: 'João', phone: '1133334444' });
+    expect(message).not.toMatch(/E-mail|Assunto|Data|Quantidade|Local|Mensagem/);
     expect(message).toContain('Contato: (11) 3333-4444');
   });
 
+  it('usa os rótulos definidos no painel', () => {
+    const message = buildQuoteMessage(
+      { name: 'Ana', phone: '11987654321', subject: 'Casamento', quantity: '80' },
+      {
+        subject: 'Tipo de evento',
+        date: 'Data do evento',
+        quantity: 'Convidados',
+        location: 'Local',
+        details: 'Detalhes',
+      },
+    );
+    expect(message).toContain('Tipo de evento: Casamento');
+    expect(message).toContain('Convidados: 80');
+  });
+
   it('sobrevive à codificação de URL com acentos e quebras de linha', () => {
-    const message = buildQuoteMessage({ name: 'Zé Ção', phone: '11987654321', eventType: 'Feira ou exposição' });
+    const message = buildQuoteMessage({ name: 'Zé Ção', phone: '11987654321', subject: 'Feira ou exposição' });
     expect(decode(buildWhatsAppUrl('5511920102743', message))).toBe(message);
   });
 });

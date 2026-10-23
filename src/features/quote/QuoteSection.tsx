@@ -4,14 +4,16 @@ import { Button } from '../../components/Button/Button';
 import { WhatsAppIcon } from '../../components/icons/WhatsAppIcon';
 import { SectionHeading } from '../../components/SectionHeading/SectionHeading';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import type { Section } from '../../types/content';
 import { maskPhoneInput } from '../../utils/phone';
 import { openExternal } from '../../utils/browser';
 import { trackEvent } from '../../lib/metrics';
 import { buildQuoteMessage, buildWhatsAppUrl } from '../../utils/whatsapp';
+import { flag, formLabels, formSubjects } from '../site/sectionHelpers';
 import { useQuoteIntent } from './QuoteIntentContext';
 import {
   emptyQuoteForm,
-  OTHER_EVENT_TYPE,
+  OTHER_SUBJECT,
   QUOTE_LIMITS,
   todayIso,
   validateQuoteForm,
@@ -32,18 +34,24 @@ const FIELD_ORDER: (keyof QuoteFormValues)[] = [
   'name',
   'phone',
   'email',
-  'eventType',
-  'eventDate',
-  'guests',
+  'subject',
+  'date',
+  'quantity',
   'location',
   'details',
 ];
 
-export function QuoteSection() {
+/** Formulário que monta a mensagem e abre o WhatsApp. Os dados não ficam salvos no site. */
+export function QuoteSection({ section }: { section: Section }) {
   const { content } = useSiteContent();
-  const section = content.sections.quote;
   const { settings } = content;
   const intent = useQuoteIntent();
+  const labels = formLabels(section);
+  const show = {
+    date: flag(section, 'showDate'),
+    quantity: flag(section, 'showQuantity'),
+    location: flag(section, 'showLocation'),
+  };
 
   const [values, setValues] = useState<QuoteFormValues>(emptyQuoteForm);
   const [errors, setErrors] = useState<QuoteFormErrors>({});
@@ -54,15 +62,17 @@ export function QuoteSection() {
   const formRef = useRef<HTMLFormElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
-  const eventOptions = [...new Set([...content.eventTypes.map((e) => e.formLabel), OTHER_EVENT_TYPE])];
+  // Sem cartões com rótulo, o campo "Assunto" não aparece.
+  const cardSubjects = formSubjects(content);
+  const subjects = cardSubjects.length > 0 ? [...new Set([...cardSubjects, OTHER_SUBJECT])] : [];
 
-  // Card "Pedir orçamento para ..." em outra seção pré-seleciona o tipo de evento
+  // Link "Pedir orçamento" de um cartão pré-seleciona o assunto
   // (ajuste de estado durante a renderização, sem efeito).
   if (intent.version !== seenIntent) {
     setSeenIntent(intent.version);
-    if (intent.eventType) {
-      setValues((v) => ({ ...v, eventType: intent.eventType }));
-      setErrors((e) => ({ ...e, eventType: undefined }));
+    if (intent.subject) {
+      setValues((v) => ({ ...v, subject: intent.subject }));
+      setErrors((e) => ({ ...e, subject: undefined }));
     }
   }
 
@@ -75,8 +85,6 @@ export function QuoteSection() {
     const t = setTimeout(() => setCoolingDown(false), COOLDOWN_MS);
     return () => clearTimeout(t);
   }, [coolingDown]);
-
-  if (!section.visible) return null;
 
   function update(field: keyof QuoteFormValues) {
     return (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -99,7 +107,14 @@ export function QuoteSection() {
       return;
     }
 
-    const result = validateQuoteForm(values, eventOptions);
+    // Campos desligados no painel não vão na mensagem, mesmo que tenham sobrado de outra configuração.
+    const visibleValues: QuoteFormValues = {
+      ...values,
+      date: show.date ? values.date : '',
+      quantity: show.quantity ? values.quantity : '',
+      location: show.location ? values.location : '',
+    };
+    const result = validateQuoteForm(visibleValues, subjects);
     if (!result.ok) {
       setErrors(result.errors);
       setSentUrl(null);
@@ -108,7 +123,7 @@ export function QuoteSection() {
       return;
     }
 
-    const url = buildWhatsAppUrl(settings.whatsappNumber, buildQuoteMessage(result.data));
+    const url = buildWhatsAppUrl(settings.whatsappNumber, buildQuoteMessage(result.data, labels));
     setErrors({});
     setSentUrl(url);
     setCoolingDown(true);
@@ -135,16 +150,18 @@ export function QuoteSection() {
       </p>
     ) : null;
 
+  const optional = <span className={styles.optional}>(opcional)</span>;
   const errorCount = Object.values(errors).filter(Boolean).length;
+  const headingId = `${section.slug}-title`;
 
   return (
-    <section id="orcamento" className={styles.section} aria-labelledby="quote-title">
+    <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
       <div className={`container ${styles.wrap}`}>
         <div className={styles.intro}>
-          <SectionHeading id="quote-title" eyebrow={section.eyebrow} title={section.title} body={section.body} />
+          <SectionHeading id={headingId} eyebrow={section.eyebrow} title={section.title} body={section.body} />
           <ul className={styles.assurances}>
             <li>
-              <CheckCircle2 aria-hidden="true" /> Só nome, WhatsApp e tipo de evento são obrigatórios.
+              <CheckCircle2 aria-hidden="true" /> Só os campos com * são obrigatórios.
             </li>
             <li>
               <CheckCircle2 aria-hidden="true" /> Você revisa a mensagem antes de enviar.
@@ -198,9 +215,7 @@ export function QuoteSection() {
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="quote-email">
-                E-mail <span className={styles.optional}>(opcional)</span>
-              </label>
+              <label htmlFor="quote-email">E-mail {optional}</label>
               <input
                 {...fieldProps('email')}
                 type="email"
@@ -212,68 +227,69 @@ export function QuoteSection() {
               {errorText('email')}
             </div>
 
-            <div className={`${styles.field} ${styles.full}`}>
-              <label htmlFor="quote-eventType">
-                Tipo de evento <span aria-hidden="true">*</span>
-              </label>
-              <select {...fieldProps('eventType')} required>
-                <option value="">Selecione uma opção</option>
-                {eventOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              {errorText('eventType')}
-            </div>
+            {subjects.length > 0 && (
+              <div className={`${styles.field} ${styles.full}`}>
+                <label htmlFor="quote-subject">
+                  {labels.subject} <span aria-hidden="true">*</span>
+                </label>
+                <select {...fieldProps('subject')} required>
+                  <option value="">Selecione uma opção</option>
+                  {subjects.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                {errorText('subject')}
+              </div>
+            )}
 
-            <div className={styles.field}>
-              <label htmlFor="quote-eventDate">
-                Data prevista <span className={styles.optional}>(opcional)</span>
-              </label>
-              <input {...fieldProps('eventDate')} type="date" min={todayIso()} />
-              {errorText('eventDate')}
-            </div>
+            {show.date && (
+              <div className={styles.field}>
+                <label htmlFor="quote-date">
+                  {labels.date} {optional}
+                </label>
+                <input {...fieldProps('date')} type="date" min={todayIso()} />
+                {errorText('date')}
+              </div>
+            )}
 
-            <div className={styles.field}>
-              <label htmlFor="quote-guests">
-                Nº estimado de convidados <span className={styles.optional}>(opcional)</span>
-              </label>
-              <input
-                {...fieldProps('guests')}
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={QUOTE_LIMITS.maxGuests}
-                placeholder="Ex.: 120"
-              />
-              {errorText('guests')}
-            </div>
+            {show.quantity && (
+              <div className={styles.field}>
+                <label htmlFor="quote-quantity">
+                  {labels.quantity} {optional}
+                </label>
+                <input
+                  {...fieldProps('quantity')}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={QUOTE_LIMITS.maxQuantity}
+                />
+                {errorText('quantity')}
+              </div>
+            )}
 
-            <div className={`${styles.field} ${styles.full}`}>
-              <label htmlFor="quote-location">
-                Cidade ou local do evento <span className={styles.optional}>(opcional)</span>
-              </label>
-              <input
-                {...fieldProps('location')}
-                type="text"
-                autoComplete="address-level2"
-                maxLength={QUOTE_LIMITS.location}
-                placeholder="Ex.: Pinheiros, São Paulo"
-              />
-              {errorText('location')}
-            </div>
+            {show.location && (
+              <div className={`${styles.field} ${styles.full}`}>
+                <label htmlFor="quote-location">
+                  {labels.location} {optional}
+                </label>
+                <input
+                  {...fieldProps('location')}
+                  type="text"
+                  autoComplete="address-level2"
+                  maxLength={QUOTE_LIMITS.location}
+                />
+                {errorText('location')}
+              </div>
+            )}
 
             <div className={`${styles.field} ${styles.full}`}>
               <label htmlFor="quote-details">
-                Conte um pouco sobre o evento <span className={styles.optional}>(opcional)</span>
+                {labels.details} {optional}
               </label>
-              <textarea
-                {...fieldProps('details')}
-                rows={4}
-                maxLength={QUOTE_LIMITS.details}
-                placeholder="Horário, tipo de público, ideia de personalização..."
-              />
+              <textarea {...fieldProps('details')} rows={4} maxLength={QUOTE_LIMITS.details} />
               <p id="quote-details-hint" className={styles.hint}>
                 {values.details.length}/{QUOTE_LIMITS.details} caracteres
               </p>
@@ -295,12 +311,12 @@ export function QuoteSection() {
           </div>
 
           <Button type="submit" size="lg" block icon={<WhatsAppIcon />} disabled={coolingDown}>
-            {section.ctaLabel || 'Solicitar orçamento pelo WhatsApp'}
+            {section.ctaLabel || 'Enviar pelo WhatsApp'}
           </Button>
 
           <p className={styles.disclaimer}>
             <Info aria-hidden="true" />
-            Vamos abrir o WhatsApp com a mensagem pronta. O pedido só chega até nós quando você tocar em
+            Vamos abrir o WhatsApp com a mensagem pronta. Ela só chega até nós quando você tocar em
             <strong> Enviar</strong> na conversa.
           </p>
 

@@ -1,13 +1,14 @@
 import { defaultContent } from '../content/defaultContent';
 import { isSupabaseConfigured, MEDIA_BUCKET, SUPABASE_ANON_KEY, SUPABASE_URL } from '../lib/env';
-import { readPreviewDraft, type ListTable, type PreviewDraft } from '../lib/preview';
+import { readPreviewDraft, readPublishedStamp, type PreviewDraft } from '../lib/preview';
 import type { Tables } from '../types/database';
 import {
-  SECTION_KEYS,
-  type FlavorItem,
+  SECTION_TYPES,
   type ImageRef,
   type Section,
-  type SectionKey,
+  type SectionItem,
+  type SectionOptions,
+  type SectionType,
   type SiteContent,
   type SiteSettings,
 } from '../types/content';
@@ -15,21 +16,13 @@ import {
 export type MediaRow = Tables<'media'>;
 type SectionRow = Tables<'sections'> & { media: MediaRow | null };
 type SettingsRow = Tables<'site_settings'> & { logo: MediaRow | null; og: MediaRow | null };
-type GalleryRow = Tables<'gallery_items'> & { media: MediaRow | null };
-type FlavorRow = Tables<'flavor_items'> & { media: MediaRow | null };
 /** `photos`: as imagens de photo_media_ids, na mesma ordem (o banco não as embute: é um array). */
-type TestimonialRow = Tables<'testimonials'> & { media?: MediaRow | null; photos?: MediaRow[] };
+type ItemRow = Tables<'section_items'> & { media?: MediaRow | null; photos?: MediaRow[] };
 
 export interface ContentRows {
   settings: SettingsRow | null;
   sections: SectionRow[];
-  eventTypes: Tables<'event_types'>[];
-  features: Tables<'features'>[];
-  flavorItems: FlavorRow[];
-  steps: Tables<'steps'>[];
-  gallery: GalleryRow[];
-  faqs: Tables<'faqs'>[];
-  testimonials: TestimonialRow[];
+  items: ItemRow[];
 }
 
 /** Caminho no bucket -> URL pública. Caminhos absolutos ("/images/...", "https://...") ficam como estão. */
@@ -59,7 +52,7 @@ function mapSettings(row: SettingsRow | null): SiteSettings {
   return {
     businessName: row.business_name,
     footerTagline: row.footer_tagline,
-    logo: row.logo ? mediaToImage(row.logo, row.business_name) : d.logo,
+    logo: row.logo ? mediaToImage(row.logo, row.business_name) : null,
     whatsappNumber: row.whatsapp_number,
     whatsappGreeting: row.whatsapp_greeting,
     phone: row.phone,
@@ -82,9 +75,36 @@ function mapSettings(row: SettingsRow | null): SiteSettings {
   };
 }
 
-function mapSection(row: SectionRow): Section {
+const byPosition = <T extends { position: number }>(a: T, b: T) => a.position - b.position;
+
+const clampRating = (n: number) => Math.min(5, Math.max(1, Math.round(Number(n) || 5)));
+
+/** Só valores simples: o JSON de options vem do banco e pode ter qualquer formato. */
+function mapOptions(value: unknown): SectionOptions {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(([, v]) => typeof v === 'string' || typeof v === 'boolean'),
+  ) as SectionOptions;
+}
+
+function mapItem(row: ItemRow): SectionItem {
   return {
-    key: row.key as SectionKey,
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    label: row.label,
+    image: row.media ? mediaToImage(row.media, row.alt || row.title) : null,
+    photos: (row.photos ?? []).map((m) => mediaToImage(m, m.alt || row.title)),
+    rating: clampRating(row.rating),
+  };
+}
+
+function mapSection(row: SectionRow, items: ItemRow[]): Section {
+  return {
+    id: row.id,
+    type: row.type as SectionType,
+    slug: row.slug,
+    navLabel: row.nav_label,
     eyebrow: row.eyebrow,
     title: row.title,
     body: row.body,
@@ -92,70 +112,25 @@ function mapSection(row: SectionRow): Section {
     note: row.note,
     imageCaption: row.image_caption,
     image: row.media ? mediaToImage(row.media, row.image_alt) : null,
-    visible: row.visible,
+    options: mapOptions(row.options),
+    items: items
+      .filter((i) => i.section_id === row.id && i.visible && i.authorized)
+      // Galeria: um item sem foto (imagem excluída da biblioteca) não tem o que mostrar.
+      .filter((i) => row.type !== 'galeria' || i.media)
+      .sort(byPosition)
+      .map(mapItem),
   };
 }
 
-const byPosition = <T extends { position: number }>(a: T, b: T) => a.position - b.position;
-
-function mapFlavors(rows: FlavorRow[], kind: 'sabor' | 'apresentacao'): FlavorItem[] {
-  return rows
-    .filter((f) => f.kind === kind && f.visible)
-    .sort(byPosition)
-    .map((f) => ({
-      id: f.id,
-      title: f.title,
-      description: f.description,
-      image: f.media ? mediaToImage(f.media, f.alt || f.title) : null,
-    }));
-}
-
-const clampRating = (n: number) => Math.min(5, Math.max(1, Math.round(Number(n) || 5)));
-
 /** Converte as linhas do banco no modelo usado pelos componentes. Função pura (testável). */
 export function mapContent(rows: ContentRows): SiteContent {
-  const sectionMap = new Map(rows.sections.map((s) => [s.key, mapSection(s)]));
-  const sections = Object.fromEntries(
-    SECTION_KEYS.map((key) => [key, sectionMap.get(key) ?? defaultContent.sections[key]]),
-  ) as Record<SectionKey, Section>;
-
+  const known = new Set<string>(SECTION_TYPES);
   return {
     settings: mapSettings(rows.settings),
-    sections,
-    eventTypes: rows.eventTypes
-      .filter((e) => e.visible)
+    sections: rows.sections
+      .filter((s) => s.visible && known.has(s.type))
       .sort(byPosition)
-      .map((e) => ({ id: e.id, title: e.title, description: e.description, formLabel: e.form_label })),
-    features: rows.features
-      .filter((f) => f.visible)
-      .sort(byPosition)
-      .map((f) => ({ id: f.id, label: f.label })),
-    flavors: mapFlavors(rows.flavorItems, 'sabor'),
-    presentations: mapFlavors(rows.flavorItems, 'apresentacao'),
-    steps: rows.steps
-      .filter((s) => s.visible)
-      .sort(byPosition)
-      .map((s) => ({ id: s.id, title: s.title, description: s.description })),
-    gallery: rows.gallery
-      .filter((g) => g.visible && g.media)
-      .sort(byPosition)
-      .map((g) => ({ id: g.id, image: mediaToImage(g.media!, g.alt), caption: g.caption })),
-    faqs: rows.faqs
-      .filter((f) => f.visible)
-      .sort(byPosition)
-      .map((f) => ({ id: f.id, question: f.question, answer: f.answer })),
-    testimonials: rows.testimonials
-      .filter((t) => t.visible && t.authorized)
-      .sort(byPosition)
-      .map((t) => ({
-        id: t.id,
-        author: t.author,
-        context: t.context,
-        quote: t.quote,
-        rating: clampRating(t.rating),
-        image: t.media ? mediaToImage(t.media, t.author) : null,
-        photos: (t.photos ?? []).map((m) => mediaToImage(m, m.alt || `Foto do evento de ${t.author}`)),
-      })),
+      .map((s) => mapSection(s, rows.items)),
   };
 }
 
@@ -170,42 +145,22 @@ async function rest<T>(table: string, query: string): Promise<T> {
 
 /** Busca as linhas de todo o conteúdo público em paralelo. */
 export async function fetchContentRows(): Promise<ContentRows> {
-  const ordered = 'select=*&order=position.asc';
-
   const withMedia = `select=${encodeURIComponent('*,media(*)')}&order=position.asc`;
 
-  const [settings, sections, eventTypes, features, flavorItems, steps, gallery, faqs, testimonials] = await Promise.all(
-    [
-      rest<SettingsRow[]>(
-        'site_settings',
-        `id=eq.1&select=${encodeURIComponent('*,logo:media!site_settings_logo_media_id_fkey(*),og:media!site_settings_og_media_id_fkey(*)')}`,
-      ),
-      rest<SectionRow[]>('sections', `select=${encodeURIComponent('*,media(*)')}`),
-      rest<Tables<'event_types'>[]>('event_types', ordered),
-      rest<Tables<'features'>[]>('features', ordered),
-      rest<FlavorRow[]>('flavor_items', withMedia),
-      rest<Tables<'steps'>[]>('steps', ordered),
-      rest<GalleryRow[]>('gallery_items', withMedia),
-      rest<Tables<'faqs'>[]>('faqs', ordered),
-      rest<TestimonialRow[]>('testimonials', withMedia),
-    ],
-  );
+  const [settings, sections, items] = await Promise.all([
+    rest<SettingsRow[]>(
+      'site_settings',
+      `id=eq.1&select=${encodeURIComponent('*,logo:media!site_settings_logo_media_id_fkey(*),og:media!site_settings_og_media_id_fkey(*)')}`,
+    ),
+    rest<SectionRow[]>('sections', withMedia),
+    rest<ItemRow[]>('section_items', withMedia),
+  ]);
 
-  return {
-    settings: settings[0] ?? null,
-    sections,
-    eventTypes,
-    features,
-    flavorItems,
-    steps,
-    gallery,
-    faqs,
-    testimonials: await withPhotos(testimonials),
-  };
+  return { settings: settings[0] ?? null, sections, items: await withPhotos(items) };
 }
 
-/** Busca de uma vez as fotos do evento de todos os depoimentos e as anexa a cada um, na ordem escolhida. */
-async function withPhotos(rows: TestimonialRow[]): Promise<TestimonialRow[]> {
+/** Busca de uma vez as fotos extras de todos os itens e as anexa a cada um, na ordem escolhida. */
+async function withPhotos(rows: ItemRow[]): Promise<ItemRow[]> {
   const ids = [...new Set(rows.flatMap((t) => t.photo_media_ids ?? []))];
   if (ids.length === 0) return rows;
   const media = new Map((await rest<MediaRow[]>('media', `id=in.(${ids.join(',')})`)).map((m) => [m.id, m] as const));
@@ -224,10 +179,16 @@ export async function fetchSiteContent(): Promise<SiteContent | null> {
 /** Aplica o rascunho da pré-visualização sobre as linhas publicadas. Função pura (testável). */
 export function applyPreviewDraft(rows: ContentRows, draft: PreviewDraft | null): ContentRows {
   if (!draft) return rows;
-  const sections = rows.sections.map((row) => {
-    const d = draft.sections[row.key as SectionKey];
-    return d ? { ...row, ...d } : row;
-  });
+  // Seções do rascunho substituem as publicadas; uma seção oculta no site (que o visitante não recebe) entra aqui.
+  const drafted = new Map(Object.entries(draft.sections));
+  const sections: SectionRow[] = [
+    ...rows.sections.map((row) => {
+      const d = drafted.get(row.id);
+      drafted.delete(row.id);
+      return d ? { ...row, ...d } : row;
+    }),
+    ...[...drafted.values()].map((d) => ({ ...d, updated_at: '' })),
+  ];
   const { logo, og, ...fields } = draft.settings;
   const settings = rows.settings && {
     ...rows.settings,
@@ -235,33 +196,30 @@ export function applyPreviewDraft(rows: ContentRows, draft: PreviewDraft | null)
     ...(logo !== undefined && { logo }),
     ...(og !== undefined && { og }),
   };
-  const next: ContentRows = { ...rows, sections, settings };
+  let items = rows.items;
   for (const list of Object.values(draft.lists ?? {})) {
-    const key = ROWS_KEY[list.table];
-    if (!key) continue;
     const { column, value } = list.scope ?? {};
-    // Mantém as linhas publicadas fora do recorte (ex.: as apresentações, quando o rascunho é dos sabores).
-    const kept = column ? (next[key] as Record<string, unknown>[]).filter((r) => r[column] !== value) : [];
-    (next as unknown as Record<string, unknown[]>)[key] = [...kept, ...list.rows];
+    // Mantém os itens publicados das outras seções.
+    const kept = column ? items.filter((r) => (r as Record<string, unknown>)[column] !== value) : [];
+    items = [...kept, ...(list.rows as unknown as ItemRow[])];
   }
-  return next;
+  return { settings, sections, items };
 }
 
-const ROWS_KEY: Record<ListTable, Exclude<keyof ContentRows, 'settings' | 'sections'>> = {
-  event_types: 'eventTypes',
-  features: 'features',
-  flavor_items: 'flavorItems',
-  steps: 'steps',
-  gallery_items: 'gallery',
-  faqs: 'faqs',
-  testimonials: 'testimonials',
-};
-
 let publishedRows: Promise<ContentRows> | null = null;
+let publishedStamp = '';
 
-/** Conteúdo da pré-visualização: as linhas publicadas são buscadas uma vez e o rascunho é reaplicado a cada mudança. */
+/**
+ * Conteúdo da pré-visualização: as linhas publicadas são buscadas uma vez e o rascunho é reaplicado a cada mudança.
+ * Quando o painel grava algo (ver notifyPublishedChange), as linhas publicadas são buscadas de novo.
+ */
 export async function fetchPreviewContent(): Promise<SiteContent | null> {
   if (!isSupabaseConfigured) return null;
+  const stamp = readPublishedStamp();
+  if (stamp !== publishedStamp) {
+    publishedStamp = stamp;
+    publishedRows = null;
+  }
   publishedRows ??= fetchContentRows().catch((e: unknown) => {
     publishedRows = null;
     throw e;

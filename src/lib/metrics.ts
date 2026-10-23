@@ -9,13 +9,14 @@ import { isPreviewMode } from './preview';
 
 export type EventKind = 'visit' | 'whatsapp_click';
 
-/** Origem dos cliques no WhatsApp; o mesmo valor vai no atributo data-wa-origem dos links. */
+/**
+ * Origem dos cliques no WhatsApp; o mesmo valor vai no atributo data-wa-origem dos links.
+ * Os botões das seções usam o endereço (slug) da seção: o painel mostra o nome dela.
+ */
 export const WHATSAPP_SOURCES = {
   botao_flutuante: 'Botão flutuante',
-  destaque: 'Destaque principal',
-  personalizacao: 'Personalização',
+  cabecalho: 'Cabeçalho',
   formulario: 'Formulário de orçamento',
-  atendimento: 'Atendimento e localização',
   rodape: 'Rodapé',
 } as const;
 export type WhatsAppSource = keyof typeof WHATSAPP_SOURCES;

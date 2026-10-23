@@ -13,8 +13,16 @@ function lastDays(count: number, today = new Date()): string[] {
   return Array.from({ length: count }, (_, i) => fmt.format(new Date(today.getTime() - (count - 1 - i) * 864e5)));
 }
 
-/** Totais do período, série diária (com dias zerados) e cliques por origem. */
-export function summarize(rows: EventSummaryRow[], period: number, today?: Date) {
+/**
+ * Totais do período, série diária (com dias zerados) e cliques por origem.
+ * `sectionNames`: nome de cada seção pelo endereço (slug), para as origens que são botões de seções.
+ */
+export function summarize(
+  rows: EventSummaryRow[],
+  period: number,
+  today?: Date,
+  sectionNames: Record<string, string> = {},
+) {
   const byDay = new Map(lastDays(period, today).map((d) => [d, { day: d, visits: 0, clicks: 0 } as Day]));
   const bySource = new Map<string, number>();
   for (const r of rows) {
@@ -31,7 +39,11 @@ export function summarize(rows: EventSummaryRow[], period: number, today?: Date)
   const visits = days.reduce((s, d) => s + d.visits, 0);
   const clicks = days.reduce((s, d) => s + d.clicks, 0);
   const sources = [...bySource.entries()]
-    .map(([key, total]) => ({ key, label: WHATSAPP_SOURCES[key as keyof typeof WHATSAPP_SOURCES] ?? 'Outros', total }))
+    .map(([key, total]) => ({
+      key,
+      label: WHATSAPP_SOURCES[key as keyof typeof WHATSAPP_SOURCES] ?? sectionNames[key] ?? 'Outros',
+      total,
+    }))
     .sort((x, y) => y.total - x.total);
   return { days, visits, clicks, rate: visits > 0 ? clicks / visits : null, sources };
 }

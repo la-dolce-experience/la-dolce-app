@@ -88,3 +88,11 @@
     padding-bottom: var(--space-6);
   }
 }
+
+/* Sem logotipo cadastrado: o nome do negócio no lugar. */
+.brandName {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: #fff;
+}
