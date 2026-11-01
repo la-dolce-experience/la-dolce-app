@@ -14,6 +14,8 @@ const media = (id: string, path: string): MediaRow => ({
   alt: 'Alt padrão',
   original_name: 'foto.jpg',
   created_at: '2026-10-16',
+  source_media_id: null,
+  crop: null,
 });
 
 const emptyRows: ContentRows = { settings: null, sections: [], items: [] };

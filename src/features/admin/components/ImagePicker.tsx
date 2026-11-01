@@ -1,9 +1,11 @@
-import { ArrowLeft, ArrowRight, ImageOff, ImagePlus, Images, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crop, ImageOff, ImagePlus, Images, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../../components/Button/Button';
 import { listMedia, type MediaRow } from '../../../services/adminService';
 import { mediaThumb } from '../media';
 import { toFriendlyError } from '../../../services/errors';
+import { FREE_PRESETS, type CropPreset } from '../cropPresets';
+import { CropDialog } from './CropDialog';
 import { MediaUploader } from './MediaUploader';
 import styles from './Media.module.css';
 
@@ -11,14 +13,21 @@ interface PickerProps {
   label: string;
   help?: string;
   media: MediaRow | null;
-  onChange: (media: MediaRow | null) => void;
+  /** `preset`: proporção usada, quando a imagem acabou de ser recortada. */
+  onChange: (media: MediaRow | null, preset?: CropPreset) => void;
   /** Permite deixar a seção sem imagem. */
   optional?: boolean;
+  /** Proporções do editor de recorte; a primeira é a do lugar onde a foto aparece no site. */
+  crop?: CropPreset[];
 }
 
-/** Campo de imagem: mostra a atual e permite trocar (biblioteca ou novo envio). */
-export function ImagePicker({ label, help, media, onChange, optional = false }: PickerProps) {
+/**
+ * Campo de imagem: mostra a atual e permite trocar (biblioteca ou novo envio). Ao escolher uma foto,
+ * abre o editor de recorte; "Ajustar recorte" reabre o editor para a foto já escolhida.
+ */
+export function ImagePicker({ label, help, media, onChange, optional = false, crop = FREE_PRESETS }: PickerProps) {
   const [open, setOpen] = useState(false);
+  const [cropping, setCropping] = useState<MediaRow | null>(null);
 
   return (
     <div className={styles.picker} data-tour="image-picker">
@@ -37,6 +46,11 @@ export function ImagePicker({ label, help, media, onChange, optional = false }: 
           <Button variant="outline" size="sm" icon={<Images aria-hidden="true" />} onClick={() => setOpen(true)}>
             {media ? 'Trocar imagem' : 'Escolher imagem'}
           </Button>
+          {media && (
+            <Button variant="outline" size="sm" icon={<Crop aria-hidden="true" />} onClick={() => setCropping(media)}>
+              Ajustar recorte
+            </Button>
+          )}
           {optional && media && (
             <Button variant="ghost" size="sm" onClick={() => onChange(null)}>
               Remover imagem
@@ -52,6 +66,18 @@ export function ImagePicker({ label, help, media, onChange, optional = false }: 
           onSelect={(m) => {
             onChange(m);
             setOpen(false);
+            setCropping(m);
+          }}
+        />
+      )}
+      {cropping && (
+        <CropDialog
+          media={cropping}
+          presets={crop}
+          onClose={() => setCropping(null)}
+          onApplied={(m, preset) => {
+            onChange(m, preset);
+            setCropping(null);
           }}
         />
       )}
@@ -66,11 +92,14 @@ interface ListPickerProps {
   items: MediaRow[];
   max: number;
   onChange: (items: MediaRow[]) => void;
+  crop?: CropPreset[];
 }
 
 /** Várias imagens em ordem (ex.: fotos do evento de um depoimento): adicionar, reordenar e remover. */
-export function ImageListPicker({ label, help, items, max, onChange }: ListPickerProps) {
+export function ImageListPicker({ label, help, items, max, onChange, crop = FREE_PRESETS }: ListPickerProps) {
   const [open, setOpen] = useState(false);
+  /** Foto sendo recortada (o recorte entra no lugar dela, na mesma posição). */
+  const [cropping, setCropping] = useState<MediaRow | null>(null);
   const full = items.length >= max;
 
   function move(index: number, delta: -1 | 1) {
@@ -110,6 +139,9 @@ export function ImageListPicker({ label, help, items, max, onChange }: ListPicke
                 >
                   <ArrowRight aria-hidden="true" />
                 </button>
+                <button type="button" onClick={() => setCropping(m)} aria-label={`Ajustar o recorte da foto ${i + 1}`}>
+                  <Crop aria-hidden="true" />
+                </button>
                 <button
                   type="button"
                   onClick={() => onChange(items.filter((x) => x.id !== m.id))}
@@ -138,8 +170,25 @@ export function ImageListPicker({ label, help, items, max, onChange }: ListPicke
           title={label}
           onClose={() => setOpen(false)}
           onSelect={(m) => {
-            if (!items.some((x) => x.id === m.id)) onChange([...items, m]);
+            if (!items.some((x) => x.id === m.id)) {
+              onChange([...items, m]);
+              setCropping(m);
+            }
             setOpen(false);
+          }}
+        />
+      )}
+      {cropping && (
+        <CropDialog
+          media={cropping}
+          presets={crop}
+          onClose={() => setCropping(null)}
+          onApplied={(m) => {
+            const replaced = items.some((x) => x.id === cropping.id)
+              ? items.map((x) => (x.id === cropping.id ? m : x))
+              : [...items, m];
+            onChange(replaced.filter((x, i, all) => all.findIndex((y) => y.id === x.id) === i));
+            setCropping(null);
           }}
         />
       )}

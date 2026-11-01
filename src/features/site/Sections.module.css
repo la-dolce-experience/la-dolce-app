@@ -95,6 +95,37 @@
   object-fit: cover;
 }
 
+/* Formato e ponto de foco escolhidos no painel (ver heroImage.ts). A proporção é a mesma no celular e no computador. */
+.heroCard[data-formato='quadrada'] img {
+  aspect-ratio: 1;
+}
+
+.heroCard[data-formato='vertical'] {
+  width: 100%;
+  max-width: 30rem;
+  justify-self: center;
+}
+
+.heroCard[data-formato='vertical'] img {
+  aspect-ratio: 4 / 5;
+}
+
+.heroCard[data-foco='topo'] img {
+  object-position: 50% 0%;
+}
+
+.heroCard[data-foco='base'] img {
+  object-position: 50% 100%;
+}
+
+.heroCard[data-foco='esquerda'] img {
+  object-position: 0% 50%;
+}
+
+.heroCard[data-foco='direita'] img {
+  object-position: 100% 50%;
+}
+
 .badge {
   position: absolute;
   left: var(--space-4);
@@ -103,6 +134,7 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.94);
+  color: var(--color-ink);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.18);
   font-weight: 800;
   font-size: var(--fs-sm);
@@ -135,6 +167,99 @@
   object-fit: contain;
   padding: var(--space-6);
   background: radial-gradient(circle at 50% 20%, #fff, #fff4f7);
+}
+
+/* Botão do WhatsApp abaixo do texto ("Texto com imagem" e "Catálogo"). */
+.splitText {
+  display: grid;
+  gap: var(--space-6);
+  justify-items: start;
+}
+
+.splitSolo {
+  justify-items: center;
+  text-align: center;
+}
+
+.splitSolo .splitText {
+  justify-items: center;
+}
+
+/* ---------- Carrossel de fotos ("Texto com imagem" com mais de uma foto) ---------- */
+.photoCarousel {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Arrastar no celular: rolagem horizontal com encaixe, uma foto por vez. */
+.photoTrack {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.photoTrack:focus-visible {
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 3px var(--color-brand-deep);
+}
+
+.photoTrack::-webkit-scrollbar {
+  display: none;
+}
+
+.photoTrack > * {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  min-width: 0;
+}
+
+.photoCarousel .carouselControls {
+  margin-top: 0;
+}
+
+.carouselButton svg.pauseIcon {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Cor de fundo da seção (painel → opções → "Cor de fundo da seção") ---------- */
+.themed {
+  color: var(--color-text);
+}
+
+.themeCreme {
+  background: var(--color-cream);
+}
+
+.themeRosa {
+  background: var(--color-info-bg);
+}
+
+/*
+ * Roxo açaí #4b1e4f. Texto branco 13,1:1; textos de apoio #ebdded 10:1; texto acima do título #f9c6dd 8,9:1;
+ * nos cartões (#5e2d63) o branco fica em 10,3:1. Os tokens são redefinidos só dentro da faixa.
+ */
+.themeAcai {
+  --color-text: #fff;
+  --color-text-soft: #ebdded;
+  --color-muted: #ebdded;
+  --color-brand-deep: #f9c6dd;
+  --color-surface: #5e2d63;
+  --color-border: rgba(255, 255, 255, 0.16);
+  --color-border-strong: rgba(255, 255, 255, 0.45);
+  --color-info-bg: rgba(255, 255, 255, 0.14);
+  background: #4b1e4f;
+}
+
+/* Catálogo "colado" abaixo de uma seção com cor de fundo: ganha o próprio respiro em vez de subir sobre ela. */
+.themed + .catalogCompact {
+  margin-top: 0;
+  padding-top: var(--space-10);
 }
 
 /* ---------- Cards de eventos ---------- */
@@ -344,6 +469,7 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.94);
+  color: var(--color-ink);
   font-size: var(--fs-xs);
   font-weight: 700;
   text-align: left;
@@ -559,7 +685,7 @@
   border: 1px solid var(--color-border);
   border-radius: 50%;
   background: var(--color-surface);
-  color: var(--color-ink);
+  color: var(--color-text);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
 }
@@ -792,6 +918,11 @@
 
   .splitReverse > :first-child {
     order: 2;
+  }
+
+  .splitSolo {
+    grid-template-columns: minmax(0, 780px);
+    justify-content: center;
   }
 
   .gallery {

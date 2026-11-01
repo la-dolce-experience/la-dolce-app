@@ -13,7 +13,17 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SectionType } from '../../types/content';
+import { HERO_FORMATS } from '../site/heroImage';
+import { CAROUSEL_SECONDS } from '../site/sectionHelpers';
+import { SECTION_THEMES } from '../site/sectionThemes';
 import type { FieldDef } from './components/ListEditor';
+import {
+  AVATAR_PRESETS,
+  CATALOG_ITEM_PRESETS,
+  EVENT_PHOTO_PRESETS,
+  GALLERY_PRESETS,
+  splitPhotoPresets,
+} from './cropPresets';
 
 type SectionField = 'eyebrow' | 'title' | 'body' | 'ctaLabel' | 'note' | 'imageCaption' | 'image';
 
@@ -89,6 +99,21 @@ const imagePositionOption: OptionDef = {
   help: 'No celular, a foto sempre fica acima do texto.',
 };
 
+/** Cor de fundo (ver site/sectionThemes.ts): só nos tipos de THEMED_SECTION_TYPES. */
+const themeOption: OptionDef = {
+  key: 'theme',
+  label: 'Cor de fundo da seção',
+  type: 'select',
+  choices: SECTION_THEMES.map(({ value, label }) => ({ value, label })),
+  default: 'padrao',
+  help: 'Destaca a seção com uma faixa colorida de ponta a ponta. No roxo açaí, os textos ficam brancos.',
+};
+
+const whatsappButtonField = {
+  label: 'Texto do botão do WhatsApp (opcional)',
+  help: 'Aparece abaixo do texto e abre o WhatsApp com a mensagem de saudação. Em branco, sem botão.',
+};
+
 export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
   {
     type: 'hero',
@@ -105,8 +130,14 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         help: 'Leva ao formulário de contato. Sem formulário na página, abre o WhatsApp.',
       },
       note: { label: 'Nota abaixo dos botões', help: 'Ex.: região de atendimento.' },
-      image: { label: 'Foto principal' },
-      imageCaption: { label: 'Selo sobre a foto' },
+      image: {
+        label: 'Foto principal',
+        help: 'Tamanho ideal: 1600 × 1280 px, foto deitada na proporção 5:4 (mínimo 1000 × 800 px). Ao escolher a foto, o editor de recorte abre na moldura do formato escolhido nas opções; "Ajustar recorte" reabre o editor.',
+      },
+      imageCaption: {
+        label: 'Selo sobre a foto',
+        help: 'Fica no canto de baixo, à esquerda, por cima da foto. Evite deixar o produto nesse canto.',
+      },
     },
     options: [
       {
@@ -117,15 +148,31 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         default: 'Tirar dúvidas no WhatsApp',
         help: 'Segundo botão, ao lado do principal. Deixe em branco para não exibir.',
       },
+      {
+        key: 'imageFormat',
+        label: 'Formato da foto',
+        type: 'select',
+        choices: HERO_FORMATS.map((f) => ({ value: f.value, label: `${f.label}: ideal ${f.ideal}` })),
+        default: 'horizontal',
+        help: 'O mesmo formato vale para o celular e o computador. Escolha o que mais se parece com a sua foto.',
+      },
     ],
     starter: { name: 'Destaque principal', slug: 'destaque', title: 'Um título claro sobre o que você oferece.' },
   },
   {
     type: 'texto_imagem',
     label: 'Texto com imagem',
-    description: 'Um bloco de texto com uma foto ao lado. Bom para "Sobre", história ou um serviço em destaque.',
+    description:
+      'Um bloco de texto com uma foto ao lado, ou várias fotos que trocam sozinhas (carrossel). Bom para "Sobre", história ou um produto em destaque.',
     icon: PanelsTopLeft,
-    fields: { ...heading, image: { label: 'Foto (opcional)' } },
+    fields: {
+      ...heading,
+      ctaLabel: whatsappButtonField,
+      image: {
+        label: 'Foto (opcional)',
+        help: 'Com fotos em "Fotos do carrossel", mais abaixo, esta é a primeira do carrossel.',
+      },
+    },
     options: [
       imagePositionOption,
       {
@@ -138,7 +185,37 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         ],
         default: 'cortada',
       },
+      {
+        key: 'carouselSeconds',
+        label: 'Tempo de cada foto no carrossel',
+        type: 'select',
+        choices: CAROUSEL_SECONDS.map((s) => ({ value: s, label: `${s} segundos` })),
+        default: '5',
+        help: 'Só vale quando há fotos em "Fotos do carrossel". O carrossel para quando o visitante passa o mouse ou usa o teclado.',
+      },
+      themeOption,
     ],
+    list: {
+      title: 'Fotos do carrossel (opcional)',
+      description:
+        'Com uma ou mais fotos aqui, a foto da seção vira um carrossel que troca sozinho: primeiro a foto acima, depois estas, na ordem da lista. No celular, o visitante também pode arrastar para os lados.',
+      itemName: 'foto',
+      titleField: 'alt',
+      fields: [
+        { key: 'media_id', label: 'Foto', type: 'media', required: true, crop: splitPhotoPresets('cortada') },
+        {
+          key: 'alt',
+          label: 'Descrição da foto (texto alternativo)',
+          type: 'text',
+          required: true,
+          maxLength: 200,
+          help: 'Descreva o que aparece na foto (ex.: "Casquinha com sorvete de pistache"). Importante para acessibilidade e Google.',
+        },
+        visibleField,
+      ],
+      defaults: { visible: true, media_id: null },
+      emptyText: 'Nenhuma foto no carrossel. A seção mostra só a foto acima.',
+    },
     starter: { name: 'Sobre', slug: 'sobre', eyebrow: 'Sobre', title: 'Quem está por trás do negócio.' },
   },
   {
@@ -164,6 +241,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         default: 'Pedir orçamento',
         help: 'Aparece nos cartões que têm "Opção no formulário", seguido da opção (ex.: "Pedir orçamento para evento social"), e já deixa a opção escolhida.',
       },
+      themeOption,
     ],
     list: {
       title: 'Cartões',
@@ -199,6 +277,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         help: 'Sem título, texto e foto, a grade aparece logo abaixo da seção anterior (ex.: a lista de sabores abaixo de "Sabores e apresentação").',
       },
       body: heading.body,
+      ctaLabel: whatsappButtonField,
       image: { label: 'Foto da seção (opcional)', help: 'Fotos com fundo transparente (PNG) ficam melhores aqui.' },
     },
     titleOptional: true,
@@ -211,6 +290,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         maxLength: 60,
         default: '',
       },
+      themeOption,
     ],
     list: {
       title: 'Itens do catálogo',
@@ -226,7 +306,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
           help: 'Ex.: "A partir de R$ 90" ou "Sob encomenda".',
         },
         { key: 'description', label: 'Descrição (opcional)', type: 'textarea', maxLength: 300 },
-        { key: 'media_id', label: 'Foto (opcional)', type: 'media' },
+        { key: 'media_id', label: 'Foto (opcional)', type: 'media', crop: CATALOG_ITEM_PRESETS },
         altField,
         visibleField,
       ],
@@ -267,6 +347,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: ListOrdered,
     hiddenWhenEmpty: true,
     fields: heading,
+    options: [themeOption],
     list: {
       title: 'Etapas',
       itemName: 'etapa',
@@ -289,12 +370,13 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: Images,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
+    options: [themeOption],
     list: {
       title: 'Fotos',
       itemName: 'foto',
       titleField: 'alt',
       fields: [
-        { key: 'media_id', label: 'Foto', type: 'media', required: true },
+        { key: 'media_id', label: 'Foto', type: 'media', required: true, crop: GALLERY_PRESETS },
         {
           key: 'alt',
           label: 'Descrição da foto (texto alternativo)',
@@ -319,6 +401,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: MessageSquareQuote,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
+    options: [themeOption],
     list: {
       title: 'Depoimentos',
       itemName: 'depoimento',
@@ -339,12 +422,14 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
           label: 'Fotos (opcional)',
           type: 'media-list',
           max: 5,
+          crop: EVENT_PHOTO_PRESETS,
           help: 'Até 5 fotos. No site aparecem abaixo do depoimento; ao tocar, abrem em tela cheia.',
         },
         {
           key: 'media_id',
           label: 'Foto de perfil (opcional)',
           type: 'media',
+          crop: AVATAR_PRESETS,
           help: 'Foto de quem deu o depoimento. Aparece em círculo ao lado do nome.',
         },
         {
@@ -427,6 +512,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: CircleHelp,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
+    options: [themeOption],
     list: {
       title: 'Perguntas',
       itemName: 'pergunta',

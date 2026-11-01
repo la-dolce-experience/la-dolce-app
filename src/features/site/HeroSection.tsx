@@ -5,6 +5,7 @@ import { ResponsiveImage } from '../../components/ResponsiveImage/ResponsiveImag
 import { useSiteContent } from '../../hooks/useSiteContent';
 import type { Section } from '../../types/content';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import { heroFocus, heroFormat } from './heroImage';
 import { formAnchor, opt } from './sectionHelpers';
 import styles from './Sections.module.css';
 
@@ -67,7 +68,11 @@ export function HeroSection({ section }: { section: Section }) {
         </div>
 
         {section.image && (
-          <figure className={styles.heroCard}>
+          <figure
+            className={styles.heroCard}
+            data-formato={heroFormat(section.options.imageFormat).value}
+            data-foco={heroFocus(section.options.imageFocus).value}
+          >
             <ResponsiveImage image={section.image} priority sizes="(min-width: 960px) 620px, 100vw" />
             {section.imageCaption && <figcaption className={styles.badge}>{section.imageCaption}</figcaption>}
           </figure>
