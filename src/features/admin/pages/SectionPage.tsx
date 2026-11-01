@@ -11,6 +11,8 @@ import { useFeedback } from '../components/Feedback';
 import { SelectField, TextAreaField, TextField, ToggleField } from '../components/Fields';
 import { HeroImagePreview } from '../components/HeroImagePreview';
 import { ImagePicker } from '../components/ImagePicker';
+import { ThemePicker } from '../components/ThemePicker';
+import { themeColorError } from '../themeColor';
 import { FREE, heroCropPresets, splitPhotoPresets, type CropPreset } from '../cropPresets';
 import { ListEditor } from '../components/ListEditor';
 import { SaveBar } from '../components/SaveBar';
@@ -178,6 +180,11 @@ function SectionEditor({ id }: { id: string }) {
     setErrors(next);
     const first = Object.keys(next)[0];
     if (first) document.getElementById(`section-${first}`)?.focus();
+    // Cor personalizada inválida ou sem contraste: o ThemePicker mostra o motivo; não salva.
+    if (!first && themeColorError(v.options.theme, v.options.themeColor)) {
+      document.querySelector<HTMLInputElement>('#section-option-theme input[type="text"]')?.focus();
+      return false;
+    }
     return !first;
   }
 
@@ -336,6 +343,18 @@ function SectionEditor({ id }: { id: string }) {
               {config.options.map((o) => {
                 const id = `section-option-${o.key}`;
                 const value = v.options[o.key];
+                if (o.key === 'themeColor') return null;
+                if (o.key === 'theme') {
+                  return (
+                    <ThemePicker
+                      key={o.key}
+                      id={id}
+                      theme={String(value ?? 'padrao')}
+                      color={String(v.options.themeColor ?? '')}
+                      onChange={(theme, color) => form.set('options', { ...v.options, theme, themeColor: color })}
+                    />
+                  );
+                }
                 if (o.type === 'toggle') {
                   return (
                     <ToggleField

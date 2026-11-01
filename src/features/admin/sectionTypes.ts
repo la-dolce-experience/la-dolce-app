@@ -109,6 +109,20 @@ const themeOption: OptionDef = {
   help: 'Destaca a seção com uma faixa colorida de ponta a ponta. No roxo açaí, os textos ficam brancos.',
 };
 
+/** Cor personalizada (#RRGGBB), usada quando theme = "personalizada". Editada junto, no ThemePicker. */
+const themeColorOption: OptionDef = {
+  key: 'themeColor',
+  label: 'Cor personalizada',
+  type: 'text',
+  maxLength: 7,
+  default: '',
+};
+
+const themeOptions = [themeOption, themeColorOption];
+
+/** Opções desenhadas pelo ThemePicker, não pela lista genérica de opções. */
+export const THEME_OPTION_KEYS = ['theme', 'themeColor'];
+
 const whatsappButtonField = {
   label: 'Texto do botão do WhatsApp (opcional)',
   help: 'Aparece abaixo do texto e abre o WhatsApp com a mensagem de saudação. Em branco, sem botão.',
@@ -193,7 +207,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         default: '5',
         help: 'Só vale quando há fotos em "Fotos do carrossel". O carrossel para quando o visitante passa o mouse ou usa o teclado.',
       },
-      themeOption,
+      ...themeOptions,
     ],
     list: {
       title: 'Fotos do carrossel (opcional)',
@@ -241,7 +255,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         default: 'Pedir orçamento',
         help: 'Aparece nos cartões que têm "Opção no formulário", seguido da opção (ex.: "Pedir orçamento para evento social"), e já deixa a opção escolhida.',
       },
-      themeOption,
+      ...themeOptions,
     ],
     list: {
       title: 'Cartões',
@@ -290,7 +304,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         maxLength: 60,
         default: '',
       },
-      themeOption,
+      ...themeOptions,
     ],
     list: {
       title: 'Itens do catálogo',
@@ -320,6 +334,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     label: 'Faixa de destaques',
     description: 'Faixa de contraste com uma lista de diferenciais e o botão do WhatsApp.',
     icon: ListChecks,
+    options: themeOptions,
     fields: {
       ...heading,
       ctaLabel: { label: 'Texto do botão do WhatsApp', help: 'Deixe em branco para não exibir o botão.' },
@@ -347,7 +362,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: ListOrdered,
     hiddenWhenEmpty: true,
     fields: heading,
-    options: [themeOption],
+    options: themeOptions,
     list: {
       title: 'Etapas',
       itemName: 'etapa',
@@ -370,7 +385,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: Images,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
-    options: [themeOption],
+    options: themeOptions,
     list: {
       title: 'Fotos',
       itemName: 'foto',
@@ -401,7 +416,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: MessageSquareQuote,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
-    options: [themeOption],
+    options: themeOptions,
     list: {
       title: 'Depoimentos',
       itemName: 'depoimento',
@@ -512,7 +527,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
     icon: CircleHelp,
     hiddenWhenEmpty: true,
     fields: { eyebrow: heading.eyebrow, title: heading.title, body: { label: 'Texto (opcional)' } },
-    options: [themeOption],
+    options: themeOptions,
     list: {
       title: 'Perguntas',
       itemName: 'pergunta',

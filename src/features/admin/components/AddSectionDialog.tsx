@@ -6,6 +6,9 @@ import { defaultIconKey } from '../sectionIcons';
 import { SECTION_TYPE_CONFIG, sectionTypeConfig } from '../sectionTypes';
 import { SelectField, TextField } from './Fields';
 import { IconPicker } from './IconPicker';
+import { ThemePicker } from './ThemePicker';
+import { themeColorError } from '../themeColor';
+import { THEMED_SECTION_TYPES } from '../../site/sectionThemes';
 import styles from './AddSectionDialog.module.css';
 
 export interface AddSectionChoice {
@@ -15,6 +18,8 @@ export interface AddSectionChoice {
   icon: string;
   /** Posição da nova seção (0 = topo da página). */
   position: number;
+  /** Cor de fundo (só nos tipos que aceitam; ver sectionThemes). */
+  theme?: { theme: string; themeColor: string };
 }
 
 interface Props {
@@ -34,6 +39,7 @@ export function AddSectionDialog({ sections, initialPosition, busy, onConfirm, o
   const [icon, setIcon] = useState('');
   const [position, setPosition] = useState(initialPosition ?? sections.length);
   const [error, setError] = useState<string>();
+  const [theme, setTheme] = useState({ theme: 'padrao', themeColor: '' });
   const used = new Set(sections.map((s) => s.type));
 
   useEffect(() => {
@@ -60,7 +66,19 @@ export function AddSectionDialog({ sections, initialPosition, busy, onConfirm, o
       setError('Dê um nome para a seção.');
       return;
     }
-    onConfirm({ type, name: name.trim(), icon: icon || defaultIconKey(type), position });
+    const themed = THEMED_SECTION_TYPES.includes(type);
+    if (themed && themeColorError(theme.theme, theme.themeColor)) {
+      setError('Escolha outra cor personalizada: a atual não deixa o texto legível.');
+      document.querySelector<HTMLInputElement>('#add-section-theme input[type="text"]')?.focus();
+      return;
+    }
+    onConfirm({
+      type,
+      name: name.trim(),
+      icon: icon || defaultIconKey(type),
+      position,
+      ...(themed && { theme }),
+    });
   }
 
   return (
@@ -131,6 +149,18 @@ export function AddSectionDialog({ sections, initialPosition, busy, onConfirm, o
             ]}
           />
         </div>
+
+        {type && THEMED_SECTION_TYPES.includes(type) && (
+          <ThemePicker
+            id="add-section-theme"
+            theme={theme.theme}
+            color={theme.themeColor}
+            onChange={(t, c) => {
+              setTheme({ theme: t, themeColor: c });
+              setError(undefined);
+            }}
+          />
+        )}
 
         <IconPicker
           id="add-section-icon"

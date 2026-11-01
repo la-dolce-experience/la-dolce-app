@@ -4,7 +4,7 @@ import { SiteContentProvider } from '../../hooks/useSiteContent';
 import { HomePage } from '../../pages/HomePage';
 import type { ImageRef, Section, SectionItem, SiteContent } from '../../types/content';
 import { describeRatio, heroCrop, heroFormat } from './heroImage';
-import { sectionTheme } from './sectionThemes';
+import { contrastRatio, customTheme, sectionTheme } from './sectionThemes';
 
 const photo = (n: number): ImageRef => ({
   mediaId: `m${n}`,
@@ -127,6 +127,23 @@ describe('Carrossel de fotos em "Texto com imagem"', () => {
 });
 
 describe('Cor de fundo da seção', () => {
+  it('cor personalizada: faixa com a cor e o texto escolhido pelo contraste', async () => {
+    const { container } = await renderHome(
+      withSection('sabores', { options: { theme: 'personalizada', themeColor: '#fde68a' } }),
+    );
+    const band = container.querySelector<HTMLElement>('[data-tema="personalizada"]');
+    expect(band?.style.background).toMatch(/253, 230, 138|#fde68a/);
+    expect(band?.style.getPropertyValue('--color-text')).toBe('#210513');
+  });
+
+  it('texto claro ou escuro pelo contraste; tons médios não atingem AA', () => {
+    expect(customTheme('#4b1e4f')).toMatchObject({ text: '#ffffff', ok: true });
+    expect(customTheme('#fde68a')).toMatchObject({ text: '#210513', ok: true });
+    expect(customTheme('#777777')?.ok).toBe(false);
+    expect(customTheme('#12345')).toBeNull();
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 0);
+  });
+
   it('roxo açaí envolve a seção numa faixa com data-tema', async () => {
     const { container } = await renderHome(withSection('sabores', { options: { theme: 'acai' } }));
     const band = container.querySelector('[data-tema="acai"]');
@@ -135,11 +152,19 @@ describe('Cor de fundo da seção', () => {
   });
 
   it('ignora cores desconhecidas e tipos sem cor de fundo', () => {
-    expect(sectionTheme('texto_imagem', 'acai')).toBe('acai');
-    expect(sectionTheme('texto_imagem', 'padrao')).toBeNull();
-    expect(sectionTheme('texto_imagem', 'verde')).toBeNull();
-    expect(sectionTheme('hero', 'acai')).toBeNull();
-    expect(sectionTheme('formulario', 'acai')).toBeNull();
+    expect(sectionTheme('texto_imagem', { theme: 'acai' })).toEqual({ kind: 'acai' });
+    expect(sectionTheme('destaques', { theme: 'creme' })).toEqual({ kind: 'creme' });
+    expect(sectionTheme('texto_imagem', { theme: 'padrao' })).toBeNull();
+    expect(sectionTheme('texto_imagem', { theme: 'verde' })).toBeNull();
+    expect(sectionTheme('hero', { theme: 'acai' })).toBeNull();
+    expect(sectionTheme('formulario', { theme: 'acai' })).toBeNull();
+    // Cor personalizada inválida ou sem contraste AA: fundo padrão.
+    expect(sectionTheme('cartoes', { theme: 'personalizada', themeColor: 'red' })).toBeNull();
+    expect(sectionTheme('cartoes', { theme: 'personalizada', themeColor: '#777777' })).toBeNull();
+    expect(sectionTheme('cartoes', { theme: 'personalizada', themeColor: '#1D4ED8' })).toMatchObject({
+      kind: 'personalizada',
+      theme: { background: '#1d4ed8', text: '#ffffff', ok: true },
+    });
   });
 });
 

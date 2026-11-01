@@ -31,7 +31,7 @@ export function useSectionActions() {
     });
   }
 
-  async function create({ type, name, icon, position }: AddSectionChoice): Promise<SectionRow | null> {
+  async function create({ type, name, icon, position, theme }: AddSectionChoice): Promise<SectionRow | null> {
     const starter = sectionTypeConfig[type].starter;
     try {
       const row = await createSection(
@@ -44,7 +44,7 @@ export function useSectionActions() {
           title: starter.title,
           body: starter.body ?? '',
           cta_label: starter.ctaLabel ?? '',
-          options: withDefaultOptions(type as SectionType, {}),
+          options: withDefaultOptions(type as SectionType, theme ?? {}),
         },
         position,
       );

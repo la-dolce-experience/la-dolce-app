@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import type { Section, SectionType } from '../../types/content';
 import { QuoteSection } from '../quote/QuoteSection';
 import { CatalogSection } from './CatalogSection';
@@ -7,7 +7,7 @@ import { GallerySection } from './GallerySection';
 import { HeroSection } from './HeroSection';
 import { LocationSection } from './LocationSection';
 import { hasContent } from './sectionHelpers';
-import { sectionTheme } from './sectionThemes';
+import { customThemeVars, sectionTheme } from './sectionThemes';
 import styles from './Sections.module.css';
 import { TestimonialsSection } from './TestimonialsSection';
 import { TextImageSection } from './TextImageSection';
@@ -39,10 +39,22 @@ export function SectionList({ sections }: { sections: Section[] }) {
       {sections.filter(hasContent).map((section) => {
         const Component = COMPONENTS[section.type];
         if (!Component) return null;
-        const theme = sectionTheme(section.type, section.options.theme);
+        const theme = sectionTheme(section.type, section.options);
         if (!theme) return <Component key={section.id} section={section} />;
+        if (theme.kind === 'personalizada') {
+          return (
+            <div
+              key={section.id}
+              className={styles.themed}
+              data-tema="personalizada"
+              style={customThemeVars(theme.theme) as CSSProperties}
+            >
+              <Component section={section} />
+            </div>
+          );
+        }
         return (
-          <div key={section.id} className={`${styles.themed} ${THEME_CLASS[theme]}`} data-tema={theme}>
+          <div key={section.id} className={`${styles.themed} ${THEME_CLASS[theme.kind]}`} data-tema={theme.kind}>
             <Component section={section} />
           </div>
         );
