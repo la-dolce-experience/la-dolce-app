@@ -619,7 +619,11 @@ test.describe('Carrossel, cor de fundo e foto do topo', () => {
       .setInputFiles({ name: 'carrossel.png', mimeType: 'image/png', buffer: await pngOf(page, 1000, 800, '#7a3b7f') });
     await library.getByLabel(/Descrição da imagem/).fill(alt);
     await library.getByRole('button', { name: 'Enviar imagem' }).click();
-    await expect(library).toHaveCount(0);
+    // Escolhida a foto, o editor de recorte abre; Cancelar mantém a foto inteira.
+    const cropper = page.getByRole('dialog', { name: 'Ajustar recorte' });
+    await expect(cropper).toBeVisible();
+    await cropper.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await item.locator('input[id$="-alt"]').fill(alt);
     await item.getByRole('button', { name: 'Salvar foto' }).click();
     await expect(page.getByText('Foto adicionado(a).')).toBeVisible();
@@ -664,16 +668,61 @@ test.describe('Carrossel, cor de fundo e foto do topo', () => {
     await expect(card).toHaveCount(0);
   });
 
-  test('foto do topo: prévia do recorte com formato e ponto de foco', async ({ page }) => {
+  test('recorte da foto do topo: editor, imagem nova e novo ajuste a partir da original', async ({ page, context }) => {
     await openSection(page, 'Destaque principal');
-    const preview = page.getByTestId('hero-preview');
-    await expect(preview).toContainText('Como a foto aparece no site');
     await expect(page.getByText(/Tamanho ideal: 1600 × 1280 px/)).toBeVisible();
-    await page.locator('#section-option-imageFormat').selectOption('vertical');
-    await page.locator('#section-option-imageFocus').selectOption('topo');
-    await expect(preview.locator('div').first()).toHaveCSS('aspect-ratio', '0.8 / 1');
-    await expect(preview.locator('img')).toHaveCSS('object-position', '50% 0%');
-    await page.getByRole('button', { name: 'Descartar' }).click();
+    await page.getByRole('button', { name: 'Ajustar recorte' }).click();
+    const cropper = page.getByRole('dialog', { name: 'Ajustar recorte' });
+    const preview = cropper.getByTestId('crop-preview').locator('img');
+    await expect(preview).toBeVisible();
+
+    // Moldura no formato quadrado, zoom pelo teclado e posição pelas setas.
+    await cropper.getByRole('radio', { name: 'Quadrada 1:1' }).check();
+    await cropper.getByTestId('cropper').focus();
+    await page.keyboard.press('+');
+    await page.keyboard.press('+');
+    await page.keyboard.press('ArrowLeft');
+    await expect(cropper.getByLabel('Zoom')).toHaveValue('1.2');
+    await expect(cropper.getByTestId('crop-preview')).toHaveCSS('aspect-ratio', '1 / 1');
+    await cropper.getByRole('button', { name: 'Aplicar recorte' }).click();
+    await expect(cropper).toHaveCount(0);
+
+    // O formato da seção acompanha o recorte, e a prévia mostra a foto sem cortes.
+    await expect(page.locator('#section-option-imageFormat')).toHaveValue('quadrada');
+    await expect(page.getByTestId('hero-preview')).toContainText('aparece inteira');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+
+    const site = await context.newPage();
+    await site.goto('/');
+    const heroImg = site.locator('figure[data-formato="quadrada"] img');
+    await expect(heroImg).toHaveAttribute('src', /\/storage\/v1\/object\/public\/media\/uploads\/.+-lg\.webp$/);
+
+    // Ajustar de novo parte da ORIGINAL, com o formato usado antes.
+    await page.getByRole('button', { name: 'Ajustar recorte' }).click();
+    await expect(preview).toHaveAttribute('src', /estacao-balcao-1600\.webp$/);
+    await expect(cropper.getByRole('radio', { name: 'Quadrada 1:1' })).toBeChecked();
+    await cropper.getByRole('button', { name: 'Cancelar' }).click();
+
+    // Limpeza: volta a foto original no formato padrão e exclui o recorte da biblioteca.
+    await page.getByRole('button', { name: 'Trocar imagem' }).click();
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Balcão rosa da La Dolce Experience/ })
+      .last() // a biblioteca lista as mais novas primeiro: a original é a última
+      .click();
+    await cropper.getByRole('button', { name: 'Cancelar' }).click();
+    await page.locator('#section-option-imageFormat').selectOption('horizontal');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+    await expect(page.getByTestId('hero-preview').locator('img')).toHaveAttribute('src', /estacao-balcao/);
+
+    await page.goto('/admin/imagens');
+    const crop = page.locator('li', { hasText: 'recorte (a original continua na biblioteca)' });
+    await expect(crop).toHaveCount(1);
+    await crop.getByRole('button', { name: 'Excluir' }).click();
+    await page.getByRole('dialog', { name: 'Excluir imagem?' }).getByRole('button', { name: 'Excluir imagem' }).click();
+    await expect(crop).toHaveCount(0);
   });
 });
 
@@ -723,6 +772,7 @@ test.describe('Imagens', () => {
       .getByRole('dialog')
       .getByRole('button', { name: /Imagem de teste e2e/ })
       .click();
+    await page.getByRole('dialog', { name: 'Ajustar recorte' }).getByRole('button', { name: 'Cancelar' }).click();
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
     await expect(page.getByText('Seção salva').last()).toBeVisible();
 

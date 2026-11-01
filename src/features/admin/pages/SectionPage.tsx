@@ -11,6 +11,7 @@ import { useFeedback } from '../components/Feedback';
 import { SelectField, TextAreaField, TextField, ToggleField } from '../components/Fields';
 import { HeroImagePreview } from '../components/HeroImagePreview';
 import { ImagePicker } from '../components/ImagePicker';
+import { FREE, heroCropPresets, splitPhotoPresets, type CropPreset } from '../cropPresets';
 import { ListEditor } from '../components/ListEditor';
 import { SaveBar } from '../components/SaveBar';
 import { useTrackDirty } from '../components/UnsavedChanges';
@@ -79,6 +80,14 @@ function toForm(row: SectionRow): SectionForm {
     options: withDefaultOptions(row.type as SectionType, row.options),
     visible: row.visible,
   };
+}
+
+/** Proporções do recorte da foto da seção, conforme o tipo e as opções (ver cropPresets.ts). */
+function sectionCropPresets(type: SectionType, options: Record<string, string | boolean>): CropPreset[] {
+  if (type === 'hero') return heroCropPresets(options.imageFormat);
+  if (type === 'texto_imagem') return splitPhotoPresets(options.imageFit);
+  if (type === 'catalogo') return splitPhotoPresets('inteira');
+  return [FREE];
 }
 
 export function SectionPage() {
@@ -298,10 +307,15 @@ function SectionEditor({ id }: { id: string }) {
                 help={f.image.help}
                 media={v.image_media_id ? (media.get(v.image_media_id) ?? null) : null}
                 optional
-                onChange={(m) => {
+                crop={sectionCropPresets(row.type as SectionType, v.options)}
+                onChange={(m, preset) => {
                   if (m) {
                     setMedia((prev) => new Map(prev).set(m.id, m));
                     form.set('image_alt', m.alt);
+                  }
+                  // Foto do topo recortada em outro formato: o formato da seção acompanha o recorte.
+                  if (row.type === 'hero' && preset?.value) {
+                    form.set('options', { ...v.options, imageFormat: preset.value });
                   }
                   form.set('image_media_id', m?.id ?? null);
                 }}
@@ -366,7 +380,6 @@ function SectionEditor({ id }: { id: string }) {
             <HeroImagePreview
               media={media.get(v.image_media_id)!}
               format={v.options.imageFormat}
-              focus={v.options.imageFocus}
               caption={v.image_caption}
             />
           )}

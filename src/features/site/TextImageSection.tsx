@@ -53,7 +53,10 @@ export function SplitSection({
 
   return (
     <section id={section.slug} className={styles.section} aria-labelledby={headingId}>
-      <div className={`container ${styles.split} ${imageRight ? styles.splitReverse : ''}`}>
+      {/* Sem foto, o texto fica centralizado (ex.: seção nova ainda sem fotos). */}
+      <div
+        className={`container ${styles.split} ${imageRight ? styles.splitReverse : ''} ${images.length ? '' : styles.splitSolo}`}
+      >
         {images.length > 1 ? (
           <PhotoCarousel
             images={images}
@@ -70,7 +73,13 @@ export function SplitSection({
           )
         )}
         <div className={styles.splitText}>
-          <SectionHeading id={headingId} eyebrow={section.eyebrow} title={section.title} body={section.body} />
+          <SectionHeading
+            id={headingId}
+            align={images.length ? 'left' : 'center'}
+            eyebrow={section.eyebrow}
+            title={section.title}
+            body={section.body}
+          />
           {section.ctaLabel && (
             <ButtonLink
               variant="whatsapp"

@@ -144,6 +144,11 @@ export async function listMedia(): Promise<MediaRow[]> {
   return check(await requireSupabase().from('media').select('*').order('created_at', { ascending: false }));
 }
 
+/** Uma imagem da biblioteca (ex.: a original de um recorte). null se não existe mais. */
+export async function getMedia(id: string): Promise<MediaRow | null> {
+  return check(await requireSupabase().from('media').select('*').eq('id', id).maybeSingle());
+}
+
 export async function updateMediaAlt(id: string, alt: string): Promise<MediaRow> {
   return check(await requireSupabase().from('media').update({ alt }).eq('id', id).select().single());
 }
@@ -158,8 +163,19 @@ export interface ProcessedImage {
   mimeType: 'image/webp' | 'image/jpeg';
 }
 
+/** Recorte feito no painel: a imagem original e a área recortada (em %), para recortar de novo a partir dela. */
+export interface CropOrigin {
+  source_media_id: string;
+  crop: { x: number; y: number; width: number; height: number; aspect: number | null };
+}
+
 /** Envia as duas variantes ao Storage e registra os metadados. Em caso de falha, desfaz o upload. */
-export async function uploadMedia(image: ProcessedImage, alt: string, originalName: string): Promise<MediaRow> {
+export async function uploadMedia(
+  image: ProcessedImage,
+  alt: string,
+  originalName: string,
+  origin?: CropOrigin,
+): Promise<MediaRow> {
   const db = requireSupabase();
   const ext = image.mimeType === 'image/webp' ? 'webp' : 'jpg';
   const id = crypto.randomUUID();
@@ -191,6 +207,7 @@ export async function uploadMedia(image: ProcessedImage, alt: string, originalNa
           mime_type: image.mimeType,
           alt,
           original_name: originalName.slice(0, 200),
+          ...(origin && { source_media_id: origin.source_media_id, crop: { ...origin.crop } }),
         })
         .select()
         .single(),

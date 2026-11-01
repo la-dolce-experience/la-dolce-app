@@ -13,10 +13,17 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { SectionType } from '../../types/content';
-import { HERO_FOCUS, HERO_FORMATS } from '../site/heroImage';
+import { HERO_FORMATS } from '../site/heroImage';
 import { CAROUSEL_SECONDS } from '../site/sectionHelpers';
 import { SECTION_THEMES } from '../site/sectionThemes';
 import type { FieldDef } from './components/ListEditor';
+import {
+  AVATAR_PRESETS,
+  CATALOG_ITEM_PRESETS,
+  EVENT_PHOTO_PRESETS,
+  GALLERY_PRESETS,
+  splitPhotoPresets,
+} from './cropPresets';
 
 type SectionField = 'eyebrow' | 'title' | 'body' | 'ctaLabel' | 'note' | 'imageCaption' | 'image';
 
@@ -125,7 +132,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
       note: { label: 'Nota abaixo dos botões', help: 'Ex.: região de atendimento.' },
       image: {
         label: 'Foto principal',
-        help: 'Tamanho ideal: 1600 × 1280 px, foto deitada na proporção 5:4 (mínimo 1000 × 800 px). Fotos em outra proporção são cortadas nas bordas: escolha o formato e o ponto de foco abaixo e confira na prévia.',
+        help: 'Tamanho ideal: 1600 × 1280 px, foto deitada na proporção 5:4 (mínimo 1000 × 800 px). Ao escolher a foto, o editor de recorte abre na moldura do formato escolhido nas opções; "Ajustar recorte" reabre o editor.',
       },
       imageCaption: {
         label: 'Selo sobre a foto',
@@ -148,14 +155,6 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         choices: HERO_FORMATS.map((f) => ({ value: f.value, label: `${f.label}: ideal ${f.ideal}` })),
         default: 'horizontal',
         help: 'O mesmo formato vale para o celular e o computador. Escolha o que mais se parece com a sua foto.',
-      },
-      {
-        key: 'imageFocus',
-        label: 'Parte da foto que deve aparecer sempre',
-        type: 'select',
-        choices: HERO_FOCUS.map((f) => ({ value: f.value, label: f.label })),
-        default: 'centro',
-        help: 'Quando a foto tem outra proporção, o site corta as bordas e mantém esta parte visível.',
       },
     ],
     starter: { name: 'Destaque principal', slug: 'destaque', title: 'Um título claro sobre o que você oferece.' },
@@ -203,7 +202,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
       itemName: 'foto',
       titleField: 'alt',
       fields: [
-        { key: 'media_id', label: 'Foto', type: 'media', required: true },
+        { key: 'media_id', label: 'Foto', type: 'media', required: true, crop: splitPhotoPresets('cortada') },
         {
           key: 'alt',
           label: 'Descrição da foto (texto alternativo)',
@@ -307,7 +306,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
           help: 'Ex.: "A partir de R$ 90" ou "Sob encomenda".',
         },
         { key: 'description', label: 'Descrição (opcional)', type: 'textarea', maxLength: 300 },
-        { key: 'media_id', label: 'Foto (opcional)', type: 'media' },
+        { key: 'media_id', label: 'Foto (opcional)', type: 'media', crop: CATALOG_ITEM_PRESETS },
         altField,
         visibleField,
       ],
@@ -377,7 +376,7 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
       itemName: 'foto',
       titleField: 'alt',
       fields: [
-        { key: 'media_id', label: 'Foto', type: 'media', required: true },
+        { key: 'media_id', label: 'Foto', type: 'media', required: true, crop: GALLERY_PRESETS },
         {
           key: 'alt',
           label: 'Descrição da foto (texto alternativo)',
@@ -423,12 +422,14 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
           label: 'Fotos (opcional)',
           type: 'media-list',
           max: 5,
+          crop: EVENT_PHOTO_PRESETS,
           help: 'Até 5 fotos. No site aparecem abaixo do depoimento; ao tocar, abrem em tela cheia.',
         },
         {
           key: 'media_id',
           label: 'Foto de perfil (opcional)',
           type: 'media',
+          crop: AVATAR_PRESETS,
           help: 'Foto de quem deu o depoimento. Aparece em círculo ao lado do nome.',
         },
         {

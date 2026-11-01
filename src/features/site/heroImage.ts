@@ -1,5 +1,6 @@
 /**
- * Enquadramento da foto do destaque principal (sections.options.imageFormat e imageFocus).
+ * Enquadramento da foto do destaque principal (sections.options.imageFormat; imageFocus só é lido para
+ * compatibilidade: o painel agora recorta a foto no formato, no editor de recorte).
  *
  * A foto do topo é exibida numa moldura de proporção fixa, a MESMA no celular e no computador, com
  * object-fit: cover: o que não cabe na proporção é cortado. O formato escolhe a proporção da moldura e o

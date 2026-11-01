@@ -145,6 +145,7 @@ function MediaCard({
       <div className={styles.body}>
         <p className={styles.meta}>
           {media.width_lg}×{media.height_lg}px{isStatic ? ' · imagem original do site' : ''}
+          {media.source_media_id ? ' · recorte (a original continua na biblioteca)' : ''}
         </p>
         <TextField
           id={`alt-${media.id}`}

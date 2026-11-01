@@ -176,6 +176,15 @@
   justify-items: start;
 }
 
+.splitSolo {
+  justify-items: center;
+  text-align: center;
+}
+
+.splitSolo .splitText {
+  justify-items: center;
+}
+
 /* ---------- Carrossel de fotos ("Texto com imagem" com mais de uma foto) ---------- */
 .photoCarousel {
   display: grid;
@@ -909,6 +918,11 @@
 
   .splitReverse > :first-child {
     order: 2;
+  }
+
+  .splitSolo {
+    grid-template-columns: minmax(0, 780px);
+    justify-content: center;
   }
 
   .gallery {

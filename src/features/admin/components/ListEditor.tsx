@@ -26,6 +26,7 @@ import a from '../admin.module.css';
 import { useFeedback } from './Feedback';
 import { useLivePreview } from '../preview/LivePreview';
 import { RatingField, TextAreaField, TextField, ToggleField } from './Fields';
+import type { CropPreset } from '../cropPresets';
 import { ImageListPicker, ImagePicker } from './ImagePicker';
 import { useTrackDirty } from './UnsavedChanges';
 import styles from './ListEditor.module.css';
@@ -41,6 +42,8 @@ export interface FieldDef {
   rows?: number;
   /** Máximo de imagens (campos 'media-list'). */
   max?: number;
+  /** Proporções do editor de recorte (campos 'media' e 'media-list'). */
+  crop?: CropPreset[];
   help?: string;
 }
 
@@ -515,6 +518,7 @@ function ItemCard({
                 label={f.label}
                 help={f.help}
                 max={f.max ?? 5}
+                crop={f.crop}
                 items={resolveMedia(value, media)}
                 onChange={(list) => {
                   list.forEach(onMediaAdded);
@@ -533,6 +537,7 @@ function ItemCard({
                   label={f.label}
                   help={f.help}
                   optional={!f.required}
+                  crop={f.crop}
                   media={typeof value === 'string' ? (media.get(value) ?? null) : null}
                   onChange={(m) => {
                     if (m) {

@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 import a from '../admin.module.css';
 import { TextAreaField, TextField } from '../components/Fields';
 import { ImagePicker } from '../components/ImagePicker';
+import { OG_PRESETS } from '../cropPresets';
 import { RepublishPanel } from '../components/RepublishPanel';
 import { SettingsEditor } from '../components/SettingsEditor';
 import { PageHeader } from './PageHeader';
@@ -61,6 +62,7 @@ export function SeoPage() {
               </div>
               <ImagePicker
                 label="Imagem"
+                crop={OG_PRESETS}
                 media={values.og_media_id ? (media.get(values.og_media_id) ?? null) : null}
                 optional
                 onChange={(m) => {
