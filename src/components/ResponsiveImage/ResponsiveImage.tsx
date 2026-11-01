@@ -8,9 +8,11 @@ interface Props {
   priority?: boolean;
   className?: string;
   alt?: string;
+  /** Carrega já, sem prioridade alta (ex.: a próxima foto de um carrossel). */
+  eager?: boolean;
 }
 
-export function ResponsiveImage({ image, sizes = '100vw', priority = false, className, alt }: Props) {
+export function ResponsiveImage({ image, sizes = '100vw', priority = false, className, alt, eager = false }: Props) {
   return (
     <img
       src={image.src}
@@ -19,7 +21,7 @@ export function ResponsiveImage({ image, sizes = '100vw', priority = false, clas
       width={image.width}
       height={image.height}
       alt={alt ?? image.alt}
-      loading={priority ? 'eager' : 'lazy'}
+      loading={priority || eager ? 'eager' : 'lazy'}
       decoding={priority ? 'sync' : 'async'}
       fetchPriority={priority ? 'high' : 'auto'}
       className={className}

@@ -583,6 +583,100 @@ test.describe('Seções da página', () => {
   });
 });
 
+test.describe('Carrossel, cor de fundo e foto do topo', () => {
+  test.beforeEach(async ({ page }) => login(page));
+
+  /** Imagem gerada no navegador (sem arquivo no repositório). */
+  async function pngOf(page: Page, width: number, height: number, color: string) {
+    const dataUrl = await page.evaluate(
+      ([w, h, c]) => {
+        const canvas = Object.assign(document.createElement('canvas'), { width: w, height: h });
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = c as string;
+        ctx.fillRect(0, 0, w as number, h as number);
+        return canvas.toDataURL('image/png');
+      },
+      [width, height, color],
+    );
+    return Buffer.from(dataUrl.split(',')[1], 'base64');
+  }
+
+  test('fotos do carrossel em "Sabores e apresentação" e fundo roxo açaí refletem no site', async ({
+    page,
+    context,
+  }) => {
+    const alt = `Foto do carrossel e2e ${Date.now()}`;
+    await openSection(page, 'Sabores e apresentação');
+    await expect(page.getByRole('heading', { name: 'Fotos do carrossel (opcional)' })).toBeVisible();
+
+    // Nova foto no carrossel: envio pela biblioteca, já escolhida para o item.
+    await page.getByRole('button', { name: 'Adicionar foto' }).first().click();
+    const item = page.locator('ol > li').last();
+    await item.getByRole('button', { name: 'Escolher imagem' }).click();
+    const library = page.getByRole('dialog');
+    await library
+      .locator('input[type="file"]')
+      .setInputFiles({ name: 'carrossel.png', mimeType: 'image/png', buffer: await pngOf(page, 1000, 800, '#7a3b7f') });
+    await library.getByLabel(/Descrição da imagem/).fill(alt);
+    await library.getByRole('button', { name: 'Enviar imagem' }).click();
+    await expect(library).toHaveCount(0);
+    await item.locator('input[id$="-alt"]').fill(alt);
+    await item.getByRole('button', { name: 'Salvar foto' }).click();
+    await expect(page.getByText('Foto adicionado(a).')).toBeVisible();
+
+    // Cor de fundo roxo açaí.
+    await page.locator('#section-option-theme').selectOption('acai');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+
+    const site = await context.newPage();
+    await site.goto('/#sabores');
+    const carousel = site.getByRole('region', { name: /^Fotos:/ });
+    await expect(carousel).toBeVisible();
+    await expect(carousel.getByRole('button', { name: /Ir para a foto/ })).toHaveCount(2);
+    await expect(carousel.getByRole('button', { name: 'Pausar a troca automática das fotos' })).toBeVisible();
+    await carousel.getByRole('button', { name: 'Próxima foto' }).click();
+    await expect(carousel.getByRole('button', { name: 'Ir para a foto 2' })).toHaveAttribute('aria-current', 'true');
+    await expect(site.locator('[data-tema="acai"] section#sabores')).toBeVisible();
+    await expect(site.locator('[data-tema="acai"]')).toHaveCSS('background-color', 'rgb(75, 30, 79)');
+    const axe = await new AxeBuilder({ page: site }).include('[data-tema="acai"]').analyze();
+    expect(axe.violations).toEqual([]);
+
+    // Limpeza: fundo padrão, foto fora do carrossel e da lixeira, imagem fora da biblioteca.
+    await page.locator('#section-option-theme').selectOption('padrao');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Seção salva').last()).toBeVisible();
+    const saved = page.locator('li', { has: page.locator(`input[value="${alt}"]`) });
+    await saved.getByRole('button', { name: 'Excluir' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir' }).click();
+    await expect(page.getByText('Foto excluído(a).')).toBeVisible();
+    await site.reload();
+    await expect(site.getByRole('region', { name: /^Fotos:/ })).toHaveCount(0);
+    await expect(site.locator('[data-tema]')).toHaveCount(0);
+
+    await page.goto('/admin/lixeira');
+    await page.getByRole('button', { name: `Excluir definitivamente “${alt}”` }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+    await page.goto('/admin/imagens');
+    const card = page.locator('li', { has: page.locator(`input[value="${alt}"]`) });
+    await card.getByRole('button', { name: 'Excluir' }).click();
+    await page.getByRole('dialog', { name: 'Excluir imagem?' }).getByRole('button', { name: 'Excluir imagem' }).click();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('foto do topo: prévia do recorte com formato e ponto de foco', async ({ page }) => {
+    await openSection(page, 'Destaque principal');
+    const preview = page.getByTestId('hero-preview');
+    await expect(preview).toContainText('Como a foto aparece no site');
+    await expect(page.getByText(/Tamanho ideal: 1600 × 1280 px/)).toBeVisible();
+    await page.locator('#section-option-imageFormat').selectOption('vertical');
+    await page.locator('#section-option-imageFocus').selectOption('topo');
+    await expect(preview.locator('div').first()).toHaveCSS('aspect-ratio', '0.8 / 1');
+    await expect(preview.locator('img')).toHaveCSS('object-position', '50% 0%');
+    await page.getByRole('button', { name: 'Descartar' }).click();
+  });
+});
+
 test.describe('Imagens', () => {
   test.beforeEach(async ({ page }) => login(page));
 

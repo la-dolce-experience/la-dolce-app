@@ -9,6 +9,7 @@ import type { SectionType } from '../../../types/content';
 import a from '../admin.module.css';
 import { useFeedback } from '../components/Feedback';
 import { SelectField, TextAreaField, TextField, ToggleField } from '../components/Fields';
+import { HeroImagePreview } from '../components/HeroImagePreview';
 import { ImagePicker } from '../components/ImagePicker';
 import { ListEditor } from '../components/ListEditor';
 import { SaveBar } from '../components/SaveBar';
@@ -359,6 +360,15 @@ function SectionEditor({ id }: { id: string }) {
                 );
               })}
             </fieldset>
+          )}
+
+          {row.type === 'hero' && v.image_media_id && media.get(v.image_media_id) && (
+            <HeroImagePreview
+              media={media.get(v.image_media_id)!}
+              format={v.options.imageFormat}
+              focus={v.options.imageFocus}
+              caption={v.image_caption}
+            />
           )}
 
           <fieldset className={a.fieldset} data-tour="section-identity">

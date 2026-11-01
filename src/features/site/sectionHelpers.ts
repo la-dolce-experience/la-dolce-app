@@ -7,6 +7,9 @@ export function opt(section: Section, key: string, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
 
+/** Tempos de cada foto do carrossel de "Texto com imagem" oferecidos no painel, em segundos. */
+export const CAROUSEL_SECONDS = ['4', '5', '7', '10'];
+
 /** Opção liga/desliga da seção. */
 export function flag(section: Section, key: string, fallback = false): boolean {
   const value = section.options[key];
