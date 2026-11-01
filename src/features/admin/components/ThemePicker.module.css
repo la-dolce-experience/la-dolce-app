@@ -1,0 +1,137 @@
+.picker {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.picker legend {
+  margin-bottom: var(--space-1);
+  font-weight: 800;
+  font-size: var(--fs-sm);
+  color: var(--color-text-soft);
+}
+
+.help {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--space-2);
+}
+
+.swatch {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  text-align: center;
+}
+
+.swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.swatch:has(input:checked) {
+  border-color: var(--color-brand-deep);
+  box-shadow: 0 0 0 2px var(--color-info-bg);
+}
+
+.swatch:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.sample {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 1.125rem;
+}
+
+.name {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.colorLabel,
+.hex {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+
+.colorLabel input {
+  width: 64px;
+  height: 44px;
+  padding: 2px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.hex input {
+  width: 9rem;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.hex input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.ok,
+.error {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  flex-basis: 100%;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.ok {
+  color: var(--color-success);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.ok svg,
+.error svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}

@@ -577,6 +577,76 @@ test.describe('Seções da página', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
   });
 
+  test('criar seção com cor de fundo da paleta e com cor personalizada (axe)', async ({ page, context }) => {
+    const stamp = Date.now();
+    const created = [`Faixa açaí e2e ${stamp}`, `Faixa cor própria e2e ${stamp}`];
+
+    async function create(name: string, pick: () => Promise<void>) {
+      await page.goto('/admin/secoes');
+      await page.getByRole('button', { name: 'Adicionar seção', exact: true }).first().click();
+      const dialog = page.getByRole('dialog', { name: 'Adicionar seção' });
+      // A cor aparece depois de escolher um tipo que aceita cor de fundo.
+      await expect(dialog.getByRole('group', { name: 'Cor de fundo da seção' })).toHaveCount(0);
+      await dialog.getByText('Texto com imagem', { exact: true }).click();
+      await expect(dialog.getByRole('radio', { name: 'Padrão' })).toBeChecked();
+      await dialog.getByLabel('Nome da seção no painel').fill(name);
+      await pick();
+      await dialog.getByRole('button', { name: 'Criar seção' }).click();
+      await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+      await page.locator('#section-title').fill(name);
+      await page.getByRole('button', { name: 'Salvar alterações' }).click();
+      await expect(page.getByText('Seção salva').last()).toBeVisible();
+    }
+
+    // 1. Cor da paleta, escolhida já na criação.
+    await create(created[0], async () => {
+      await page.getByRole('dialog').getByRole('radio', { name: 'Roxo açaí' }).check();
+    });
+    await expect(page.getByRole('radio', { name: 'Roxo açaí' })).toBeChecked();
+
+    // 2. Cor personalizada: sem contraste suficiente não deixa criar; com contraste, texto escuro automático.
+    await create(created[1], async () => {
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('radio', { name: 'Cor personalizada' }).check();
+      await dialog.getByLabel('Código da cor').fill('#777777');
+      await dialog.getByRole('button', { name: 'Criar seção' }).click();
+      await expect(dialog.getByRole('alert').first()).toContainText('contraste suficiente');
+      await expect(dialog).toBeVisible();
+      await dialog.getByLabel('Código da cor').fill('#fde68a');
+      await expect(dialog.getByRole('status')).toContainText('Texto escuro');
+    });
+    await expect(page.getByLabel('Código da cor')).toHaveValue('#fde68a');
+
+    // No editor, a mesma validação impede salvar uma cor ilegível.
+    await page.getByLabel('Código da cor').fill('#777777');
+    await page.getByRole('button', { name: 'Salvar alterações' }).click();
+    await expect(page.getByText('Alterações não salvas')).toBeVisible();
+    await page.getByRole('button', { name: 'Descartar' }).click();
+
+    const site = await context.newPage();
+    await site.goto('/');
+    const acai = site.locator('[data-tema="acai"]', { hasText: created[0] });
+    const custom = site.locator('[data-tema="personalizada"]', { hasText: created[1] });
+    await expect(acai).toHaveCSS('background-color', 'rgb(75, 30, 79)');
+    await expect(custom).toHaveCSS('background-color', 'rgb(253, 230, 138)');
+    await expect(custom.locator('h2')).toHaveCSS('color', 'rgb(33, 5, 19)');
+    const axe = await new AxeBuilder({ page: site }).include('[data-tema]').analyze();
+    expect(axe.violations).toEqual([]);
+
+    // Limpeza: exclui as duas seções e apaga da lixeira.
+    for (const name of created) {
+      await page.goto('/admin/secoes');
+      await sectionRow(page, name).getByRole('link', { name }).first().click();
+      await page.getByRole('button', { name: 'Excluir seção' }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Excluir seção' }).click();
+      await expect(page).toHaveURL(/\/admin\/secoes$/);
+      await page.goto('/admin/lixeira');
+      await page.getByRole('button', { name: `Excluir definitivamente “${name}”` }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Excluir definitivamente' }).click();
+      await expect(page.getByRole('button', { name: `Excluir definitivamente “${name}”` })).toHaveCount(0);
+    }
+  });
+
   test('tela de seções acessível (axe)', async ({ page }) => {
     const results = await new AxeBuilder({ page }).include('#admin-main').withTags(['wcag2a', 'wcag2aa']).analyze();
     expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
@@ -629,7 +699,7 @@ test.describe('Carrossel, cor de fundo e foto do topo', () => {
     await expect(page.getByText('Foto adicionado(a).')).toBeVisible();
 
     // Cor de fundo roxo açaí.
-    await page.locator('#section-option-theme').selectOption('acai');
+    await page.locator('#section-option-theme').getByRole('radio', { name: 'Roxo açaí' }).check();
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
     await expect(page.getByText('Seção salva').last()).toBeVisible();
 
@@ -647,7 +717,7 @@ test.describe('Carrossel, cor de fundo e foto do topo', () => {
     expect(axe.violations).toEqual([]);
 
     // Limpeza: fundo padrão, foto fora do carrossel e da lixeira, imagem fora da biblioteca.
-    await page.locator('#section-option-theme').selectOption('padrao');
+    await page.locator('#section-option-theme').getByRole('radio', { name: 'Padrão' }).check();
     await page.getByRole('button', { name: 'Salvar alterações' }).click();
     await expect(page.getByText('Seção salva').last()).toBeVisible();
     const saved = page.locator('li', { has: page.locator(`input[value="${alt}"]`) });
