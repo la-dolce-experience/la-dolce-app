@@ -304,6 +304,17 @@ export const SECTION_TYPE_CONFIG: SectionTypeConfig[] = [
         maxLength: 60,
         default: '',
       },
+      {
+        key: 'listLayout',
+        label: 'Exibir os cartões',
+        type: 'select',
+        choices: [
+          { value: 'grade', label: 'Em grade (todos aparecem)' },
+          { value: 'carrossel', label: 'Em carrossel (passam para o lado)' },
+        ],
+        default: 'grade',
+        help: 'No carrossel, o visitante arrasta para o lado ou usa as setas. Bom para muitas apresentações ou sabores.',
+      },
       ...themeOptions,
     ],
     list: {

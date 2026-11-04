@@ -203,3 +203,28 @@ describe('Foto do topo', () => {
     expect(describeRatio(1200, 1600)).toBe('3:4');
   });
 });
+
+describe('Cartões do catálogo em carrossel', () => {
+  const cards = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ ...photoItem(i + 1), id: `card-${i + 1}`, title: `Apresentação ${i + 1}` }));
+  const options = { imagePosition: 'direita', listTitle: 'Apresentações' };
+
+  it('com "Em carrossel", os cartões viram slides de um carrossel com o título da lista', async () => {
+    await renderHome(
+      withSection('apresentacoes', { options: { ...options, listLayout: 'carrossel' }, items: cards(5) }),
+    );
+    const carousel = screen.getByTestId('catalog-carousel');
+    expect(carousel).toHaveAccessibleName('Apresentações');
+    expect(carousel).toHaveAttribute('aria-roledescription', 'carrossel');
+    const slides = within(carousel).getAllByRole('group');
+    expect(slides).toHaveLength(5);
+    expect(slides[0]).toHaveAccessibleName('1 de 5');
+    expect(within(slides[0]).getByRole('heading', { name: 'Apresentação 1' })).toBeInTheDocument();
+  });
+
+  it('sem a opção (padrão), continua em grade', async () => {
+    await renderHome(withSection('apresentacoes', { options, items: cards(3) }));
+    expect(screen.queryByTestId('catalog-carousel')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Apresentação 1' }).closest('li')).not.toBeNull();
+  });
+});
