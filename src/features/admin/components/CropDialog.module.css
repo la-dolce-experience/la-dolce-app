@@ -146,6 +146,8 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background: repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 16px 16px;
+  /* Xadrez: mostra a sobra transparente quando a foto é afastada além das bordas. */
+  background: repeating-conic-gradient(#e9e3e6 0% 25%, #fff 0% 50%) 50% / 16px 16px;
 }
 
 .preview img {
