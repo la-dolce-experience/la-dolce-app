@@ -18,7 +18,8 @@ interface Props {
   onClose: () => void;
 }
 
-const MIN_ZOOM = 1;
+/** Abaixo de 1 a foto fica menor que a moldura ("afastar"); a sobra fica transparente ou com o fundo do formato. */
+const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.1;
 
@@ -106,7 +107,7 @@ export function CropDialog({ media, presets, onApplied, onClose }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const file = await cropToFile(src, area.pixels, source.original_name || source.alt);
+      const file = await cropToFile(src, area.pixels, source.original_name || source.alt, preset.background);
       const processed = await processImageFile(file);
       const created = await uploadMedia(processed, media.alt || source.alt, file.name, {
         source_media_id: source.id,
@@ -148,8 +149,10 @@ export function CropDialog({ media, presets, onApplied, onClose }: Props) {
 
       <div className={styles.body}>
         <p className={styles.help}>
-          Arraste a foto para posicionar. Para aproximar, use o controle abaixo, a roda do mouse, dois dedos ou as
-          teclas + e −; as setas movem a foto. A original continua na biblioteca.
+          Arraste a foto para posicionar. Para aproximar ou afastar, use o controle abaixo, a roda do mouse, dois dedos
+          ou as teclas + e −; as setas movem a foto. Afastando além das bordas, a sobra fica{' '}
+          {preset.background ? 'branca' : 'transparente (aparece a cor de fundo da seção)'}. A original continua na
+          biblioteca.
         </p>
 
         {presets.length > 1 && (
@@ -184,13 +187,14 @@ export function CropDialog({ media, presets, onApplied, onClose }: Props) {
                 aspect={aspect}
                 minZoom={MIN_ZOOM}
                 maxZoom={MAX_ZOOM}
+                restrictPosition={zoom >= 1}
                 onCropChange={setCrop}
                 onZoomChange={changeZoom}
                 onCropComplete={(percent, pixels) => setArea({ percent, pixels })}
                 initialCroppedAreaPercentages={initial?.preset === presetIndex ? initial.area : undefined}
                 mediaProps={{ crossOrigin: 'anonymous', alt: '' }}
                 cropperProps={{
-                  'aria-label': 'Área do recorte. Use as setas para mover a foto e + ou − para aproximar.',
+                  'aria-label': 'Área do recorte. Use as setas para mover a foto e + ou − para aproximar ou afastar.',
                   role: 'group',
                 }}
                 keyboardStep={10}
@@ -205,7 +209,11 @@ export function CropDialog({ media, presets, onApplied, onClose }: Props) {
 
           <div className={styles.side}>
             <p className={styles.label}>Prévia</p>
-            <div className={styles.preview} style={{ aspectRatio: String(aspect) }} data-testid="crop-preview">
+            <div
+              className={styles.preview}
+              style={{ aspectRatio: String(aspect), background: preset.background }}
+              data-testid="crop-preview"
+            >
               {previewImg && <img src={src} alt="" style={previewImg} crossOrigin="anonymous" />}
             </div>
             {area && (

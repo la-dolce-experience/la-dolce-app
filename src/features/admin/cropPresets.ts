@@ -10,6 +10,8 @@ export interface CropPreset {
   aspect: number | null;
   /** Valor da opção da seção ligado a esta proporção (ex.: formato da foto do topo). */
   value?: string;
+  /** Cor da sobra quando a foto é afastada além das bordas. Sem cor = transparente (aparece o fundo do site). */
+  background?: string;
 }
 
 export const FREE: CropPreset = { label: 'Livre', aspect: null };
@@ -49,6 +51,9 @@ export const AVATAR_PRESETS: CropPreset[] = [{ ...SQUARE, label: 'Quadrada 1:1 (
 export const EVENT_PHOTO_PRESETS: CropPreset[] = [FREE, SQUARE];
 
 /** Imagem de compartilhamento (WhatsApp, redes sociais): 1200 × 630 px. */
-export const OG_PRESETS: CropPreset[] = [{ label: '1200 × 630 (compartilhamento)', aspect: 1200 / 630 }];
+// Fundo branco: WhatsApp e redes mostram a transparência como preto.
+export const OG_PRESETS: CropPreset[] = [
+  { label: '1200 × 630 (compartilhamento)', aspect: 1200 / 630, background: '#ffffff' },
+];
 
 export const FREE_PRESETS: CropPreset[] = [FREE];
